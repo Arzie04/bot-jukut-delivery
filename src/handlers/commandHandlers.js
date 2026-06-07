@@ -1,17 +1,11 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.CommandHandlers = void 0;
-const node_telegram_bot_api_1 = __importDefault(require("node-telegram-bot-api"));
-const supabase_1 = __importDefault(require("../services/supabase"));
-const driverStatusSync_1 = __importDefault(require("../services/driverStatusSync"));
-const sessionManager_1 = __importDefault(require("../state/sessionManager"));
-const messages_1 = __importDefault(require("../utils/messages"));
-const keyboard_1 = __importDefault(require("../utils/keyboard"));
-const types_1 = require("../types");
-class CommandHandlers {
+import TelegramBot from 'node-telegram-bot-api';
+import SupabaseService from '../services/supabase';
+import DriverStatusSyncService from '../services/driverStatusSync';
+import sessionManager from '../state/sessionManager';
+import MessageUtils from '../utils/messages';
+import KeyboardUtils from '../utils/keyboard';
+import { DriverStatus } from '../types';
+export class CommandHandlers {
     static isAdmin(telegramId) {
         const raw = process.env.ADMIN_TELEGRAM_IDS || '';
         const ids = raw.split(',').map((id) => id.trim()).filter(Boolean);
@@ -26,22 +20,22 @@ class CommandHandlers {
         console.log(`📱 /start command from ${telegramId}`);
         try {
             // Check if user is already registered
-            const driverResponse = await supabase_1.default.getDriverByTelegramId(telegramId);
+            const driverResponse = await SupabaseService.getDriverByTelegramId(telegramId);
             if (driverResponse.success && driverResponse.data) {
                 // User is already registered
-                await bot.sendMessage(chatId, messages_1.default.getAlreadyRegisteredMessage(), {
-                    reply_markup: keyboard_1.default.createMainMenuKeyboard(),
+                await bot.sendMessage(chatId, MessageUtils.getAlreadyRegisteredMessage(), {
+                    reply_markup: KeyboardUtils.createMainMenuKeyboard(),
                 });
                 return;
             }
             // Send welcome message
-            await bot.sendMessage(chatId, messages_1.default.getWelcomeMessage(), {
-                reply_markup: keyboard_1.default.createMainMenuKeyboard(),
+            await bot.sendMessage(chatId, MessageUtils.getWelcomeMessage(), {
+                reply_markup: KeyboardUtils.createMainMenuKeyboard(),
             });
         }
         catch (error) {
             console.error('❌ Error in /start handler:', error);
-            await bot.sendMessage(chatId, messages_1.default.getErrorMessage('Terjadi kesalahan sistem'));
+            await bot.sendMessage(chatId, MessageUtils.getErrorMessage('Terjadi kesalahan sistem'));
         }
     }
     // Handle /regist_driver command
@@ -53,18 +47,18 @@ class CommandHandlers {
         console.log(`📝 /regist_driver command from ${telegramId}`);
         try {
             // Check if user is already registered
-            const driverResponse = await supabase_1.default.getDriverByTelegramId(telegramId);
+            const driverResponse = await SupabaseService.getDriverByTelegramId(telegramId);
             if (driverResponse.success && driverResponse.data) {
-                await bot.sendMessage(chatId, messages_1.default.getAlreadyRegisteredMessage());
+                await bot.sendMessage(chatId, MessageUtils.getAlreadyRegisteredMessage());
                 return;
             }
             // Start registration flow
-            sessionManager_1.default.setSession(telegramId, 'waiting_name');
-            await bot.sendMessage(chatId, messages_1.default.getRegistrationStartMessage());
+            sessionManager.setSession(telegramId, 'waiting_name');
+            await bot.sendMessage(chatId, MessageUtils.getRegistrationStartMessage());
         }
         catch (error) {
             console.error('❌ Error in /regist_driver handler:', error);
-            await bot.sendMessage(chatId, messages_1.default.getErrorMessage('Terjadi kesalahan sistem'));
+            await bot.sendMessage(chatId, MessageUtils.getErrorMessage('Terjadi kesalahan sistem'));
         }
     }
     // Handle /status command
@@ -76,28 +70,28 @@ class CommandHandlers {
         console.log(`📊 /status command from ${telegramId}`);
         try {
             // Get driver data
-            const driverResponse = await supabase_1.default.getDriverByTelegramId(telegramId);
+            const driverResponse = await SupabaseService.getDriverByTelegramId(telegramId);
             if (!driverResponse.success || !driverResponse.data) {
-                await bot.sendMessage(chatId, messages_1.default.getNotRegisteredMessage());
+                await bot.sendMessage(chatId, MessageUtils.getNotRegisteredMessage());
                 return;
             }
             const driver = driverResponse.data;
             // Get driver statistics
-            const statsResponse = await supabase_1.default.getDriverStats(driver.id);
+            const statsResponse = await SupabaseService.getDriverStats(driver.id);
             if (!statsResponse.success) {
-                await bot.sendMessage(chatId, messages_1.default.getErrorMessage('Gagal mengambil statistik'));
+                await bot.sendMessage(chatId, MessageUtils.getErrorMessage('Gagal mengambil statistik'));
                 return;
             }
             // Get active orders list
-            const activeOrdersResponse = await supabase_1.default.getDriverActiveOrders(driver.id);
+            const activeOrdersResponse = await SupabaseService.getDriverActiveOrders(driver.id);
             const activeOrders = activeOrdersResponse.data || [];
             const stats = statsResponse.data;
-            const statusMessage = messages_1.default.getDriverStatusMessage(driver, stats, activeOrders);
+            const statusMessage = MessageUtils.getDriverStatusMessage(driver, stats, activeOrders);
             await bot.sendMessage(chatId, statusMessage);
         }
         catch (error) {
             console.error('❌ Error in /status handler:', error);
-            await bot.sendMessage(chatId, messages_1.default.getErrorMessage('Terjadi kesalahan sistem'));
+            await bot.sendMessage(chatId, MessageUtils.getErrorMessage('Terjadi kesalahan sistem'));
         }
     }
     static async handleActiveOrders(bot, msg) {
@@ -106,26 +100,26 @@ class CommandHandlers {
         if (!telegramId)
             return;
         try {
-            const driverResponse = await supabase_1.default.getDriverByTelegramId(telegramId);
+            const driverResponse = await SupabaseService.getDriverByTelegramId(telegramId);
             if (!driverResponse.success || !driverResponse.data || !driverResponse.data.id) {
-                await bot.sendMessage(chatId, messages_1.default.getNotRegisteredMessage());
+                await bot.sendMessage(chatId, MessageUtils.getNotRegisteredMessage());
                 return;
             }
-            const activeOrdersResponse = await supabase_1.default.getDriverActiveOrders(driverResponse.data.id);
+            const activeOrdersResponse = await SupabaseService.getDriverActiveOrders(driverResponse.data.id);
             const activeOrders = activeOrdersResponse.data || [];
             if (!activeOrders.length) {
-                await bot.sendMessage(chatId, messages_1.default.getNoActiveOrdersMessage());
+                await bot.sendMessage(chatId, MessageUtils.getNoActiveOrdersMessage());
                 return;
             }
             for (const order of activeOrders) {
-                await bot.sendMessage(chatId, messages_1.default.getActiveOrderItemMessage(order), {
-                    reply_markup: keyboard_1.default.createActiveOrderActionKeyboard(order.order_code, order.status),
+                await bot.sendMessage(chatId, MessageUtils.getActiveOrderItemMessage(order), {
+                    reply_markup: KeyboardUtils.createActiveOrderActionKeyboard(order.order_code, order.status),
                 });
             }
         }
         catch (error) {
             console.error('❌ Error in /active_orders handler:', error);
-            await bot.sendMessage(chatId, messages_1.default.getErrorMessage('Terjadi kesalahan sistem'));
+            await bot.sendMessage(chatId, MessageUtils.getErrorMessage('Terjadi kesalahan sistem'));
         }
     }
     // Handle /standby command
@@ -137,21 +131,21 @@ class CommandHandlers {
         console.log(`🟢 /standby command from ${telegramId}`);
         try {
             // Check if user is registered
-            const driverResponse = await supabase_1.default.getDriverByTelegramId(telegramId);
+            const driverResponse = await SupabaseService.getDriverByTelegramId(telegramId);
             if (!driverResponse.success || !driverResponse.data) {
-                await bot.sendMessage(chatId, messages_1.default.getNotRegisteredMessage());
+                await bot.sendMessage(chatId, MessageUtils.getNotRegisteredMessage());
                 return;
             }
             const driver = driverResponse.data;
             if (driver.status === 'off') {
-                await supabase_1.default.updateDriverStatus(telegramId, 'standby');
+                await SupabaseService.updateDriverStatus(telegramId, 'standby');
             }
-            const syncResult = await driverStatusSync_1.default.syncFromActiveOrders(telegramId, driver.id, { respectOff: false });
-            await bot.sendMessage(chatId, messages_1.default.getStatusUpdatedMessage(syncResult.status));
+            const syncResult = await DriverStatusSyncService.syncFromActiveOrders(telegramId, driver.id, { respectOff: false });
+            await bot.sendMessage(chatId, MessageUtils.getStatusUpdatedMessage(syncResult.status));
         }
         catch (error) {
             console.error('❌ Error in /standby handler:', error);
-            await bot.sendMessage(chatId, messages_1.default.getErrorMessage('Terjadi kesalahan sistem'));
+            await bot.sendMessage(chatId, MessageUtils.getErrorMessage('Terjadi kesalahan sistem'));
         }
     }
     // Handle /off command
@@ -163,22 +157,22 @@ class CommandHandlers {
         console.log(`🔴 /off command from ${telegramId}`);
         try {
             // Check if user is registered
-            const driverResponse = await supabase_1.default.getDriverByTelegramId(telegramId);
+            const driverResponse = await SupabaseService.getDriverByTelegramId(telegramId);
             if (!driverResponse.success || !driverResponse.data) {
-                await bot.sendMessage(chatId, messages_1.default.getNotRegisteredMessage());
+                await bot.sendMessage(chatId, MessageUtils.getNotRegisteredMessage());
                 return;
             }
             // Update status to off
-            const updateResponse = await supabase_1.default.updateDriverStatus(telegramId, 'off');
+            const updateResponse = await SupabaseService.updateDriverStatus(telegramId, 'off');
             if (!updateResponse.success) {
-                await bot.sendMessage(chatId, messages_1.default.getErrorMessage('Gagal mengubah status'));
+                await bot.sendMessage(chatId, MessageUtils.getErrorMessage('Gagal mengubah status'));
                 return;
             }
-            await bot.sendMessage(chatId, messages_1.default.getStatusUpdatedMessage('off'));
+            await bot.sendMessage(chatId, MessageUtils.getStatusUpdatedMessage('off'));
         }
         catch (error) {
             console.error('❌ Error in /off handler:', error);
-            await bot.sendMessage(chatId, messages_1.default.getErrorMessage('Terjadi kesalahan sistem'));
+            await bot.sendMessage(chatId, MessageUtils.getErrorMessage('Terjadi kesalahan sistem'));
         }
     }
     static async handleOffAllDriver(bot, msg) {
@@ -191,16 +185,16 @@ class CommandHandlers {
             return;
         }
         try {
-            const response = await supabase_1.default.updateAllDriversStatus('off');
+            const response = await SupabaseService.updateAllDriversStatus('off');
             if (!response.success) {
-                await bot.sendMessage(chatId, messages_1.default.getErrorMessage('Gagal mengubah semua driver jadi OFF'));
+                await bot.sendMessage(chatId, MessageUtils.getErrorMessage('Gagal mengubah semua driver jadi OFF'));
                 return;
             }
             await bot.sendMessage(chatId, `✅ Semua driver diubah ke OFF (${response.data?.length || 0} driver).`);
         }
         catch (error) {
             console.error('❌ Error in /off_all_driver handler:', error);
-            await bot.sendMessage(chatId, messages_1.default.getErrorMessage('Terjadi kesalahan sistem'));
+            await bot.sendMessage(chatId, MessageUtils.getErrorMessage('Terjadi kesalahan sistem'));
         }
     }
     // Handle text messages (for registration flow)
@@ -211,10 +205,10 @@ class CommandHandlers {
         if (!telegramId || !text)
             return;
         // Check if user is in registration flow
-        if (!sessionManager_1.default.isInRegistrationFlow(telegramId)) {
+        if (!sessionManager.isInRegistrationFlow(telegramId)) {
             return; // Ignore text messages if not in registration flow
         }
-        const state = sessionManager_1.default.getRegistrationState(telegramId);
+        const state = sessionManager.getRegistrationState(telegramId);
         console.log(`💬 Text message from ${telegramId} in state: ${state}`);
         try {
             switch (state) {
@@ -233,7 +227,7 @@ class CommandHandlers {
         }
         catch (error) {
             console.error('❌ Error handling text message:', error);
-            await bot.sendMessage(chatId, messages_1.default.getErrorMessage('Terjadi kesalahan sistem'));
+            await bot.sendMessage(chatId, MessageUtils.getErrorMessage('Terjadi kesalahan sistem'));
         }
     }
     // Handle name input
@@ -244,48 +238,47 @@ class CommandHandlers {
             return;
         }
         // Update session with name
-        sessionManager_1.default.updateSessionData(telegramId, { name: name.trim() });
-        sessionManager_1.default.setSession(telegramId, 'waiting_driver_code');
-        await bot.sendMessage(chatId, messages_1.default.getDriverCodeMessage());
+        sessionManager.updateSessionData(telegramId, { name: name.trim() });
+        sessionManager.setSession(telegramId, 'waiting_driver_code');
+        await bot.sendMessage(chatId, MessageUtils.getDriverCodeMessage());
     }
     // Handle driver code input
     static async handleDriverCodeInput(bot, chatId, telegramId, code) {
         const driverCode = code.trim().toUpperCase();
         // Validate driver code
-        const codeResponse = await supabase_1.default.validateDriverCode(driverCode);
+        const codeResponse = await SupabaseService.validateDriverCode(driverCode);
         if (!codeResponse.success) {
-            await bot.sendMessage(chatId, messages_1.default.getInvalidDriverCodeMessage());
+            await bot.sendMessage(chatId, MessageUtils.getInvalidDriverCodeMessage());
             return;
         }
         // Update session with driver code
-        sessionManager_1.default.updateSessionData(telegramId, { driverCode });
-        sessionManager_1.default.setSession(telegramId, 'waiting_wa');
-        await bot.sendMessage(chatId, messages_1.default.getWhatsAppMessage());
+        sessionManager.updateSessionData(telegramId, { driverCode });
+        sessionManager.setSession(telegramId, 'waiting_wa');
+        await bot.sendMessage(chatId, MessageUtils.getWhatsAppMessage());
     }
     // Handle WhatsApp input
     static async handleWhatsAppInput(bot, chatId, telegramId, phone) {
         // Validate phone number
-        if (!messages_1.default.isValidPhoneNumber(phone)) {
-            await bot.sendMessage(chatId, messages_1.default.getInvalidWhatsAppMessage());
+        if (!MessageUtils.isValidPhoneNumber(phone)) {
+            await bot.sendMessage(chatId, MessageUtils.getInvalidWhatsAppMessage());
             return;
         }
-        const formattedPhone = messages_1.default.formatPhoneNumber(phone);
+        const formattedPhone = MessageUtils.formatPhoneNumber(phone);
         // Update session with WhatsApp
-        sessionManager_1.default.updateSessionData(telegramId, { whatsapp: formattedPhone });
-        sessionManager_1.default.setSession(telegramId, 'waiting_initial_status');
+        sessionManager.updateSessionData(telegramId, { whatsapp: formattedPhone });
+        sessionManager.setSession(telegramId, 'waiting_initial_status');
         // Get session data for summary
-        const sessionData = sessionManager_1.default.getSessionData(telegramId);
+        const sessionData = sessionManager.getSessionData(telegramId);
         if (!sessionData || !sessionData.name || !sessionData.driverCode) {
-            await bot.sendMessage(chatId, messages_1.default.getErrorMessage('Data registrasi tidak lengkap'));
+            await bot.sendMessage(chatId, MessageUtils.getErrorMessage('Data registrasi tidak lengkap'));
             return;
         }
         // Show registration summary and ask for initial status
-        const summaryMessage = messages_1.default.getRegistrationSummary(sessionData.name, sessionData.driverCode, formattedPhone);
+        const summaryMessage = MessageUtils.getRegistrationSummary(sessionData.name, sessionData.driverCode, formattedPhone);
         await bot.sendMessage(chatId, summaryMessage, {
-            reply_markup: keyboard_1.default.createInitialStatusKeyboard(),
+            reply_markup: KeyboardUtils.createInitialStatusKeyboard(),
         });
     }
 }
-exports.CommandHandlers = CommandHandlers;
-exports.default = CommandHandlers;
+export default CommandHandlers;
 //# sourceMappingURL=commandHandlers.js.map

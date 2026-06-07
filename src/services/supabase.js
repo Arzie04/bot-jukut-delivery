@@ -1,12 +1,9 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.SupabaseService = void 0;
-const supabase_js_1 = require("@supabase/supabase-js");
-const config_1 = require("../config");
-const types_1 = require("../types");
+import { createClient } from '@supabase/supabase-js';
+import { config } from '../config';
+import { Driver, DriverCode, DeliveryOrder, DriverStatus, OrderStatus, ApiResponse } from '../types';
 // Create Supabase client
-const supabase = (0, supabase_js_1.createClient)(config_1.config.supabase.url, config_1.config.supabase.serviceRoleKey);
-class SupabaseService {
+const supabase = createClient(config.supabase.url, config.supabase.serviceRoleKey);
+export class SupabaseService {
     // Driver operations
     static async getDriverByTelegramId(telegramId) {
         try {
@@ -332,6 +329,5 @@ class SupabaseService {
         }
     }
 }
-exports.SupabaseService = SupabaseService;
-exports.default = SupabaseService;
+export default SupabaseService;
 //# sourceMappingURL=supabase.js.map

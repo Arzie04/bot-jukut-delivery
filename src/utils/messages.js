@@ -1,13 +1,7 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.MessageUtils = void 0;
-const types_1 = require("../types");
-const config_1 = require("../config");
-const keyboard_1 = __importDefault(require("./keyboard"));
-class MessageUtils {
+import { DeliveryOrder, Driver } from '../types';
+import { config } from '../config';
+import KeyboardUtils from './keyboard';
+export class MessageUtils {
     static getCustomerName(order) {
         return order.costumer_name ?? order.customer_name ?? '-';
     }
@@ -53,8 +47,8 @@ Pilih status awal Anda:`;
     }
     // Registration complete
     static getRegistrationCompleteMessage(driver) {
-        const statusEmoji = keyboard_1.default.getStatusEmoji(driver.status);
-        const statusText = keyboard_1.default.getStatusText(driver.status);
+        const statusEmoji = KeyboardUtils.getStatusEmoji(driver.status);
+        const statusText = KeyboardUtils.getStatusText(driver.status);
         return `🎉 Registrasi berhasil!
 
 👤 Nama: ${driver.nama_driver}
@@ -66,8 +60,8 @@ Selamat bergabung dengan tim driver Ayam Jukut Cabe Ijo!`;
     }
     // Driver status message
     static getDriverStatusMessage(driver, stats, activeOrders = []) {
-        const statusEmoji = keyboard_1.default.getStatusEmoji(driver.status);
-        const statusText = keyboard_1.default.getStatusText(driver.status);
+        const statusEmoji = KeyboardUtils.getStatusEmoji(driver.status);
+        const statusText = KeyboardUtils.getStatusText(driver.status);
         let activeOrdersList = '';
         if (activeOrders.length > 0) {
             activeOrdersList = '\n\n📦 Pesanan Aktif:\n' + activeOrders.map(order => `- ${order.order_code}`).join('\n');
@@ -208,7 +202,7 @@ Gunakan format: 08xxxxxxxxxx atau +62xxxxxxxxxx`;
     }
     // Helper function to calculate ETA
     static calculateETA(distanceKm) {
-        return Math.round(distanceKm * config_1.config.eta.minutesPerKm);
+        return Math.round(distanceKm * config.eta.minutesPerKm);
     }
     // Format phone number
     static formatPhoneNumber(phone) {
@@ -251,6 +245,5 @@ Gunakan format: 08xxxxxxxxxx atau +62xxxxxxxxxx`;
         return `https://wa.me/${cleaned}`;
     }
 }
-exports.MessageUtils = MessageUtils;
-exports.default = MessageUtils;
+export default MessageUtils;
 //# sourceMappingURL=messages.js.map

@@ -1,14 +1,11 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.SpreadsheetService = void 0;
-const config_1 = require("../config");
-const types_1 = require("../types");
-const statusMapping_1 = require("../utils/statusMapping");
+import { config } from '../config';
+import { Driver } from '../types';
+import { mapOrderStatusToSpreadsheet, SpreadsheetOrderAction, } from '../utils/statusMapping';
 const DEFAULT_SPREADSHEET_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbxe5xK7fOwhC2Z4Z3khcjZ5n0N3e_-qsXwigNPeHXyDtFu2aXZqon3aIdI58Aqkciej/exec';
 function getSpreadsheetWebhookUrl() {
-    return config_1.config.spreadsheet?.webhookUrl || DEFAULT_SPREADSHEET_WEBHOOK_URL;
+    return config.spreadsheet?.webhookUrl || DEFAULT_SPREADSHEET_WEBHOOK_URL;
 }
-class SpreadsheetService {
+export class SpreadsheetService {
     static buildPayload(orderCode, status) {
         const payload = new URLSearchParams();
         payload.set('api', 'updateStatus');
@@ -47,7 +44,7 @@ class SpreadsheetService {
      * Sync order status to Google Apps Script (SC-A8: doGet api=updateStatus).
      */
     static async syncOrderStatus(orderCode, action, driver, context) {
-        const nextStatus = (0, statusMapping_1.mapOrderStatusToSpreadsheet)(action, driver);
+        const nextStatus = mapOrderStatusToSpreadsheet(action, driver);
         const driverName = driver.nama_driver;
         console.log('🔄 Spreadsheet sync start:', {
             orderCode,
@@ -118,6 +115,5 @@ class SpreadsheetService {
         return result.success;
     }
 }
-exports.SpreadsheetService = SpreadsheetService;
-exports.default = SpreadsheetService;
+export default SpreadsheetService;
 //# sourceMappingURL=spreadsheet.js.map

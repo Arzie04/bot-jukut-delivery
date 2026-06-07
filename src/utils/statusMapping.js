@@ -1,13 +1,5 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.slugifyDriverName = slugifyDriverName;
-exports.mapOrderStatusToSpreadsheet = mapOrderStatusToSpreadsheet;
-exports.getSpreadsheetActionForBotStatus = getSpreadsheetActionForBotStatus;
-exports.countDeliveringOrders = countDeliveringOrders;
-exports.countActiveOrders = countActiveOrders;
-exports.resolveDriverStatusFromOrders = resolveDriverStatusFromOrders;
-const types_1 = require("../types");
-function slugifyDriverName(namaDriver) {
+import { DeliveryOrder, Driver, OrderStatus } from '../types';
+export function slugifyDriverName(namaDriver) {
     return namaDriver
         .trim()
         .toLowerCase()
@@ -20,7 +12,7 @@ function slugifyDriverName(namaDriver) {
  * Maps bot lifecycle action to exact spreadsheet status value.
  * Apps Script updateOrderStatus writes this string as-is to column I.
  */
-function mapOrderStatusToSpreadsheet(action, driver) {
+export function mapOrderStatusToSpreadsheet(action, driver) {
     const slug = slugifyDriverName(driver.nama_driver);
     const name = driver.nama_driver.trim();
     switch (action) {
@@ -34,7 +26,7 @@ function mapOrderStatusToSpreadsheet(action, driver) {
             return 'Pesanan sudah diantar';
     }
 }
-function getSpreadsheetActionForBotStatus(botStatus, driver) {
+export function getSpreadsheetActionForBotStatus(botStatus, driver) {
     switch (botStatus) {
         case 'assigned':
             return mapOrderStatusToSpreadsheet('order_assigned', driver);
@@ -46,10 +38,10 @@ function getSpreadsheetActionForBotStatus(botStatus, driver) {
             return null;
     }
 }
-function countDeliveringOrders(orders) {
+export function countDeliveringOrders(orders) {
     return orders.filter((o) => o.status === 'delivering').length;
 }
-function countActiveOrders(orders) {
+export function countActiveOrders(orders) {
     return orders.filter((o) => o.status === 'assigned' || o.status === 'delivering').length;
 }
 /**
@@ -58,7 +50,7 @@ function countActiveOrders(orders) {
  * - delivering: ≥1 order with status delivering
  * - standby: has assigned-only OR no active orders (and not off)
  */
-function resolveDriverStatusFromOrders(activeOrders, currentStatus) {
+export function resolveDriverStatusFromOrders(activeOrders, currentStatus) {
     if (currentStatus === 'off') {
         return 'off';
     }

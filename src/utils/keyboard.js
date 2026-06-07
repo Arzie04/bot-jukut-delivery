@@ -1,9 +1,6 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.KeyboardUtils = void 0;
-const node_telegram_bot_api_1 = require("node-telegram-bot-api");
-const types_1 = require("../types");
-class KeyboardUtils {
+import { InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup } from 'node-telegram-bot-api';
+import { CallbackData, DriverStatus } from '../types';
+export class KeyboardUtils {
     static createMainMenuKeyboard() {
         return {
             keyboard: [
@@ -131,6 +128,5 @@ class KeyboardUtils {
         }
     }
 }
-exports.KeyboardUtils = KeyboardUtils;
-exports.default = KeyboardUtils;
+export default KeyboardUtils;
 //# sourceMappingURL=keyboard.js.map

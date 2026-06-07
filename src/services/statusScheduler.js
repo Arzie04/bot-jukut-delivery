@@ -1,9 +1,4 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const supabase_1 = __importDefault(require("./supabase"));
+import SupabaseService from './supabase';
 class StatusSchedulerService {
     static timer = null;
     static lastRunKey = '';
@@ -28,7 +23,7 @@ class StatusSchedulerService {
         if (now.getHours() !== 22 || now.getMinutes() !== 0 || this.lastRunKey === key) {
             return;
         }
-        const response = await supabase_1.default.updateAllDriversStatus('off');
+        const response = await SupabaseService.updateAllDriversStatus('off');
         if (!response.success) {
             console.error('❌ Auto-off failed:', response.error);
             return;
@@ -37,5 +32,5 @@ class StatusSchedulerService {
         console.log(`✅ Auto-off success: ${response.data?.length || 0} driver(s) switched to off`);
     }
 }
-exports.default = StatusSchedulerService;
+export default StatusSchedulerService;
 //# sourceMappingURL=statusScheduler.js.map

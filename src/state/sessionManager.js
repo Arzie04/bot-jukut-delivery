@@ -1,7 +1,4 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.sessionManager = void 0;
-const types_1 = require("../types");
+import { UserSession, RegistrationState } from '../types';
 class SessionManager {
     sessions = new Map();
     // Get user session
@@ -65,6 +62,6 @@ class SessionManager {
     }
 }
 // Export singleton instance
-exports.sessionManager = new SessionManager();
-exports.default = exports.sessionManager;
+export const sessionManager = new SessionManager();
+export default sessionManager;
 //# sourceMappingURL=sessionManager.js.map

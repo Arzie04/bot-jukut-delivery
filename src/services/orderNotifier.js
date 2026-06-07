@@ -1,12 +1,7 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const node_telegram_bot_api_1 = __importDefault(require("node-telegram-bot-api"));
-const supabase_1 = __importDefault(require("./supabase"));
-const messages_1 = __importDefault(require("../utils/messages"));
-const keyboard_1 = __importDefault(require("../utils/keyboard"));
+import TelegramBot from 'node-telegram-bot-api';
+import SupabaseService from './supabase';
+import MessageUtils from '../utils/messages';
+import KeyboardUtils from '../utils/keyboard';
 class OrderNotifierService {
     static intervalId = null;
     static isProcessing = false;
@@ -60,8 +55,8 @@ class OrderNotifierService {
         this.isProcessing = true;
         try {
             const [ordersResponse, driversResponse] = await Promise.all([
-                supabase_1.default.getWaitingOrders(),
-                supabase_1.default.getEligibleDriversForBroadcast(),
+                SupabaseService.getWaitingOrders(),
+                SupabaseService.getEligibleDriversForBroadcast(),
             ]);
             if (!ordersResponse.success || !ordersResponse.data) {
                 if (ordersResponse.error) {
@@ -99,7 +94,7 @@ class OrderNotifierService {
                         continue;
                     }
                     try {
-                        const sentMessage = await bot.sendMessage(chatId, messages_1.default.getOrderBroadcastMessage(order), { reply_markup: keyboard_1.default.createOrderKeyboard(order.order_code) });
+                        const sentMessage = await bot.sendMessage(chatId, MessageUtils.getOrderBroadcastMessage(order), { reply_markup: KeyboardUtils.createOrderKeyboard(order.order_code) });
                         notifiedDrivers.add(driver.telegram_id);
                         messageRefs.set(driver.telegram_id, sentMessage.message_id);
                     }
@@ -117,5 +112,5 @@ class OrderNotifierService {
         }
     }
 }
-exports.default = OrderNotifierService;
+export default OrderNotifierService;
 //# sourceMappingURL=orderNotifier.js.map

@@ -1,20 +1,14 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.CallbackHandlers = void 0;
-const node_telegram_bot_api_1 = __importDefault(require("node-telegram-bot-api"));
-const supabase_1 = __importDefault(require("../services/supabase"));
-const spreadsheet_1 = __importDefault(require("../services/spreadsheet"));
-const driverStatusSync_1 = __importDefault(require("../services/driverStatusSync"));
-const orderNotifier_1 = __importDefault(require("../services/orderNotifier"));
-const commandHandlers_1 = __importDefault(require("./commandHandlers"));
-const sessionManager_1 = __importDefault(require("../state/sessionManager"));
-const messages_1 = __importDefault(require("../utils/messages"));
-const keyboard_1 = __importDefault(require("../utils/keyboard"));
-const types_1 = require("../types");
-class CallbackHandlers {
+import TelegramBot from 'node-telegram-bot-api';
+import SupabaseService from '../services/supabase';
+import SpreadsheetService from '../services/spreadsheet';
+import DriverStatusSyncService from '../services/driverStatusSync';
+import OrderNotifierService from '../services/orderNotifier';
+import CommandHandlers from './commandHandlers';
+import sessionManager from '../state/sessionManager';
+import MessageUtils from '../utils/messages';
+import KeyboardUtils from '../utils/keyboard';
+import { CallbackData, DriverStatus } from '../types';
+export class CallbackHandlers {
     // Handle callback queries (inline keyboard button clicks)
     static async handleCallbackQuery(bot, query) {
         const chatId = query.message?.chat.id;
@@ -26,7 +20,7 @@ class CallbackHandlers {
         console.log(`🔘 Callback query from ${telegramId}: ${callbackData}`);
         try {
             // Parse callback data
-            const data = keyboard_1.default.parseCallbackData(callbackData);
+            const data = KeyboardUtils.parseCallbackData(callbackData);
             if (!data) {
                 await bot.answerCallbackQuery(query.id, { text: '❌ Data tidak valid' });
                 return;
@@ -46,7 +40,7 @@ class CallbackHandlers {
                     await this.handleCompleteDelivery(bot, query, telegramId, data.orderId);
                     break;
                 case 'view_active_orders':
-                    await commandHandlers_1.default.handleActiveOrders(bot, {
+                    await CommandHandlers.handleActiveOrders(bot, {
                         ...query.message,
                         from: query.from,
                     });
@@ -68,12 +62,12 @@ class CallbackHandlers {
         const messageId = query.message.message_id;
         try {
             // Check if user is in registration flow
-            if (!sessionManager_1.default.isInRegistrationFlow(telegramId)) {
+            if (!sessionManager.isInRegistrationFlow(telegramId)) {
                 await bot.answerCallbackQuery(query.id, { text: '❌ Sesi registrasi tidak valid' });
                 return;
             }
             // Get session data
-            const sessionData = sessionManager_1.default.getSessionData(telegramId);
+            const sessionData = sessionManager.getSessionData(telegramId);
             if (!sessionData || !sessionData.name || !sessionData.driverCode || !sessionData.whatsapp) {
                 await bot.answerCallbackQuery(query.id, { text: '❌ Data registrasi tidak lengkap' });
                 return;
@@ -87,17 +81,17 @@ class CallbackHandlers {
                 is_verified: true,
                 status: status,
             };
-            const createResponse = await supabase_1.default.createDriver(driverData);
+            const createResponse = await SupabaseService.createDriver(driverData);
             if (!createResponse.success) {
                 await bot.answerCallbackQuery(query.id, { text: '❌ Gagal menyimpan data driver' });
                 return;
             }
             // Mark driver code as used
-            await supabase_1.default.markDriverCodeAsUsed(sessionData.driverCode, createResponse.data?.id);
+            await SupabaseService.markDriverCodeAsUsed(sessionData.driverCode, createResponse.data?.id);
             // Clear session
-            sessionManager_1.default.clearSession(telegramId);
+            sessionManager.clearSession(telegramId);
             // Send completion message
-            const completionMessage = messages_1.default.getRegistrationCompleteMessage(createResponse.data);
+            const completionMessage = MessageUtils.getRegistrationCompleteMessage(createResponse.data);
             // Edit the message to remove keyboard
             await bot.editMessageText(completionMessage, {
                 chat_id: chatId,
@@ -116,7 +110,7 @@ class CallbackHandlers {
         const messageId = query.message.message_id;
         try {
             // Check if driver is registered and in standby status
-            const driverResponse = await supabase_1.default.getDriverByTelegramId(telegramId);
+            const driverResponse = await SupabaseService.getDriverByTelegramId(telegramId);
             if (!driverResponse.success || !driverResponse.data) {
                 await bot.answerCallbackQuery(query.id, { text: '❌ Anda belum terdaftar sebagai driver' });
                 return;
@@ -127,31 +121,31 @@ class CallbackHandlers {
                 return;
             }
             // Check active orders limit
-            const activeOrdersResponse = await supabase_1.default.getDriverActiveOrders(driver.id);
+            const activeOrdersResponse = await SupabaseService.getDriverActiveOrders(driver.id);
             const activeCount = activeOrdersResponse.data?.length || 0;
             if (activeCount >= 5) {
                 await bot.answerCallbackQuery(query.id, { text: 'Maksimal 5 pesanan aktif tercapai', show_alert: true });
                 return;
             }
             // Try to assign order to driver
-            const assignResponse = await supabase_1.default.assignOrderToDriver(orderId, driver.id);
+            const assignResponse = await SupabaseService.assignOrderToDriver(orderId, driver.id);
             if (!assignResponse.success) {
                 await bot.answerCallbackQuery(query.id, { text: assignResponse.error || '❌ Gagal mengambil order' });
                 return;
             }
-            await orderNotifier_1.default.markOrderTaken(bot, orderId, telegramId);
+            await OrderNotifierService.markOrderTaken(bot, orderId, telegramId);
             // Driver tetap standby sampai klik Mulai Antar
-            await driverStatusSync_1.default.syncFromActiveOrders(telegramId, driver.id);
-            const sheetResult = await spreadsheet_1.default.syncOrderStatus(assignResponse.data.order_code, 'order_assigned', driver, { previousStatus: 'disiapkan-printed' });
+            await DriverStatusSyncService.syncFromActiveOrders(telegramId, driver.id);
+            const sheetResult = await SpreadsheetService.syncOrderStatus(assignResponse.data.order_code, 'order_assigned', driver, { previousStatus: 'disiapkan-printed' });
             if (!sheetResult.success) {
                 console.error(`❌ Spreadsheet sync failed (assigned):`, sheetResult);
             }
             // Send success message with new keyboard
-            const assignedMessage = messages_1.default.getOrderAssignedMessage(assignResponse.data);
+            const assignedMessage = MessageUtils.getOrderAssignedMessage(assignResponse.data);
             await bot.editMessageText(assignedMessage, {
                 chat_id: chatId,
                 message_id: messageId,
-                reply_markup: keyboard_1.default.createDeliveryKeyboard(orderId),
+                reply_markup: KeyboardUtils.createDeliveryKeyboard(orderId),
             });
             await bot.answerCallbackQuery(query.id, { text: '✅ Order berhasil diambil!' });
         }
@@ -166,7 +160,7 @@ class CallbackHandlers {
         const messageId = query.message.message_id;
         try {
             // Check if driver is registered and has assigned status
-            const driverResponse = await supabase_1.default.getDriverByTelegramId(telegramId);
+            const driverResponse = await SupabaseService.getDriverByTelegramId(telegramId);
             if (!driverResponse.success || !driverResponse.data) {
                 await bot.answerCallbackQuery(query.id, { text: '❌ Anda belum terdaftar sebagai driver' });
                 return;
@@ -177,22 +171,22 @@ class CallbackHandlers {
                 return;
             }
             // Update order status to delivering
-            const orderResponse = await supabase_1.default.updateOrderStatus(orderId, 'delivering');
+            const orderResponse = await SupabaseService.updateOrderStatus(orderId, 'delivering');
             if (!orderResponse.success) {
                 await bot.answerCallbackQuery(query.id, { text: '❌ Gagal memulai delivery' });
                 return;
             }
-            await driverStatusSync_1.default.syncFromActiveOrders(telegramId, driver.id);
-            const sheetResult = await spreadsheet_1.default.syncOrderStatus(orderResponse.data.order_code, 'order_delivering', driver, { previousStatus: 'assigned' });
+            await DriverStatusSyncService.syncFromActiveOrders(telegramId, driver.id);
+            const sheetResult = await SpreadsheetService.syncOrderStatus(orderResponse.data.order_code, 'order_delivering', driver, { previousStatus: 'assigned' });
             if (!sheetResult.success) {
                 console.error(`❌ Spreadsheet sync failed (delivering):`, sheetResult);
             }
             // Send delivery started message with complete keyboard
-            const deliveryMessage = messages_1.default.getDeliveryStartedMessage(orderResponse.data);
+            const deliveryMessage = MessageUtils.getDeliveryStartedMessage(orderResponse.data);
             await bot.editMessageText(deliveryMessage, {
                 chat_id: chatId,
                 message_id: messageId,
-                reply_markup: keyboard_1.default.createCompleteKeyboard(orderId),
+                reply_markup: KeyboardUtils.createCompleteKeyboard(orderId),
             });
             await bot.answerCallbackQuery(query.id, { text: '🚀 Delivery dimulai!' });
         }
@@ -207,30 +201,30 @@ class CallbackHandlers {
         const messageId = query.message.message_id;
         try {
             // Check if driver is registered and has delivering status
-            const driverResponse = await supabase_1.default.getDriverByTelegramId(telegramId);
+            const driverResponse = await SupabaseService.getDriverByTelegramId(telegramId);
             if (!driverResponse.success || !driverResponse.data) {
                 await bot.answerCallbackQuery(query.id, { text: '❌ Anda belum terdaftar sebagai driver' });
                 return;
             }
             const driver = driverResponse.data;
-            const activeBefore = await supabase_1.default.getDriverActiveOrders(driver.id);
+            const activeBefore = await SupabaseService.getDriverActiveOrders(driver.id);
             const orderStillActive = activeBefore.data?.find((o) => o.order_code === orderId);
             if (!orderStillActive || orderStillActive.status !== 'delivering') {
                 await bot.answerCallbackQuery(query.id, { text: '❌ Pesanan belum dalam status pengantaran' });
                 return;
             }
-            const orderResponse = await supabase_1.default.updateOrderStatus(orderId, 'completed');
+            const orderResponse = await SupabaseService.updateOrderStatus(orderId, 'completed');
             if (!orderResponse.success) {
                 await bot.answerCallbackQuery(query.id, { text: '❌ Gagal menyelesaikan delivery' });
                 return;
             }
-            await driverStatusSync_1.default.syncFromActiveOrders(telegramId, driver.id);
-            const sheetResult = await spreadsheet_1.default.syncOrderStatus(orderResponse.data.order_code, 'order_completed', driver, { previousStatus: 'delivering' });
+            await DriverStatusSyncService.syncFromActiveOrders(telegramId, driver.id);
+            const sheetResult = await SpreadsheetService.syncOrderStatus(orderResponse.data.order_code, 'order_completed', driver, { previousStatus: 'delivering' });
             if (!sheetResult.success) {
                 console.error(`❌ Spreadsheet sync failed (completed):`, sheetResult);
             }
             // Send completion message (remove keyboard)
-            const completionMessage = messages_1.default.getDeliveryCompletedMessage(orderResponse.data);
+            const completionMessage = MessageUtils.getDeliveryCompletedMessage(orderResponse.data);
             await bot.editMessageText(completionMessage, {
                 chat_id: chatId,
                 message_id: messageId,
@@ -243,6 +237,5 @@ class CallbackHandlers {
         }
     }
 }
-exports.CallbackHandlers = CallbackHandlers;
-exports.default = CallbackHandlers;
+export default CallbackHandlers;
 //# sourceMappingURL=callbackHandlers.js.map

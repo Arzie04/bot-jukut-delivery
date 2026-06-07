@@ -15,7 +15,7 @@ function getSpreadsheetWebhookUrl(): string {
 interface SpreadsheetUpdateResult {
   success: boolean;
   orderCode: string;
-  previousStatus?: string;
+  previousStatus: string | undefined;
   nextStatus: string;
   driverName?: string;
   httpStatus?: number;
