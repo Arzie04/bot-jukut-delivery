@@ -1,0 +1,229 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.CommandHandlers = void 0;
+const node_telegram_bot_api_1 = __importDefault(require("node-telegram-bot-api"));
+const supabase_1 = __importDefault(require("../services/supabase"));
+const sessionManager_1 = __importDefault(require("../state/sessionManager"));
+const messages_1 = __importDefault(require("../utils/messages"));
+const keyboard_1 = __importDefault(require("../utils/keyboard"));
+const types_1 = require("../types");
+class CommandHandlers {
+    // Handle /start command
+    static async handleStart(bot, msg) {
+        const chatId = msg.chat.id;
+        const telegramId = msg.from?.id.toString();
+        if (!telegramId)
+            return;
+        console.log(`📱 /start command from ${telegramId}`);
+        try {
+            // Check if user is already registered
+            const driverResponse = await supabase_1.default.getDriverByTelegramId(telegramId);
+            if (driverResponse.success && driverResponse.data) {
+                // User is already registered
+                await bot.sendMessage(chatId, messages_1.default.getAlreadyRegisteredMessage());
+                return;
+            }
+            // Send welcome message
+            await bot.sendMessage(chatId, messages_1.default.getWelcomeMessage());
+        }
+        catch (error) {
+            console.error('❌ Error in /start handler:', error);
+            await bot.sendMessage(chatId, messages_1.default.getErrorMessage('Terjadi kesalahan sistem'));
+        }
+    }
+    // Handle /regist_driver command
+    static async handleRegistDriver(bot, msg) {
+        const chatId = msg.chat.id;
+        const telegramId = msg.from?.id.toString();
+        if (!telegramId)
+            return;
+        console.log(`📝 /regist_driver command from ${telegramId}`);
+        try {
+            // Check if user is already registered
+            const driverResponse = await supabase_1.default.getDriverByTelegramId(telegramId);
+            if (driverResponse.success && driverResponse.data) {
+                await bot.sendMessage(chatId, messages_1.default.getAlreadyRegisteredMessage());
+                return;
+            }
+            // Start registration flow
+            sessionManager_1.default.setSession(telegramId, 'waiting_name');
+            await bot.sendMessage(chatId, messages_1.default.getRegistrationStartMessage());
+        }
+        catch (error) {
+            console.error('❌ Error in /regist_driver handler:', error);
+            await bot.sendMessage(chatId, messages_1.default.getErrorMessage('Terjadi kesalahan sistem'));
+        }
+    }
+    // Handle /status command
+    static async handleStatus(bot, msg) {
+        const chatId = msg.chat.id;
+        const telegramId = msg.from?.id.toString();
+        if (!telegramId)
+            return;
+        console.log(`📊 /status command from ${telegramId}`);
+        try {
+            // Get driver data
+            const driverResponse = await supabase_1.default.getDriverByTelegramId(telegramId);
+            if (!driverResponse.success || !driverResponse.data) {
+                await bot.sendMessage(chatId, messages_1.default.getNotRegisteredMessage());
+                return;
+            }
+            const driver = driverResponse.data;
+            // Get driver statistics
+            const statsResponse = await supabase_1.default.getDriverStats(driver.id);
+            if (!statsResponse.success) {
+                await bot.sendMessage(chatId, messages_1.default.getErrorMessage('Gagal mengambil statistik'));
+                return;
+            }
+            const stats = statsResponse.data;
+            const statusMessage = messages_1.default.getDriverStatusMessage(driver, stats);
+            await bot.sendMessage(chatId, statusMessage);
+        }
+        catch (error) {
+            console.error('❌ Error in /status handler:', error);
+            await bot.sendMessage(chatId, messages_1.default.getErrorMessage('Terjadi kesalahan sistem'));
+        }
+    }
+    // Handle /standby command
+    static async handleStandby(bot, msg) {
+        const chatId = msg.chat.id;
+        const telegramId = msg.from?.id.toString();
+        if (!telegramId)
+            return;
+        console.log(`🟢 /standby command from ${telegramId}`);
+        try {
+            // Check if user is registered
+            const driverResponse = await supabase_1.default.getDriverByTelegramId(telegramId);
+            if (!driverResponse.success || !driverResponse.data) {
+                await bot.sendMessage(chatId, messages_1.default.getNotRegisteredMessage());
+                return;
+            }
+            // Update status to standby
+            const updateResponse = await supabase_1.default.updateDriverStatus(telegramId, 'standby');
+            if (!updateResponse.success) {
+                await bot.sendMessage(chatId, messages_1.default.getErrorMessage('Gagal mengubah status'));
+                return;
+            }
+            await bot.sendMessage(chatId, messages_1.default.getStatusUpdatedMessage('standby'));
+        }
+        catch (error) {
+            console.error('❌ Error in /standby handler:', error);
+            await bot.sendMessage(chatId, messages_1.default.getErrorMessage('Terjadi kesalahan sistem'));
+        }
+    }
+    // Handle /off command
+    static async handleOff(bot, msg) {
+        const chatId = msg.chat.id;
+        const telegramId = msg.from?.id.toString();
+        if (!telegramId)
+            return;
+        console.log(`🔴 /off command from ${telegramId}`);
+        try {
+            // Check if user is registered
+            const driverResponse = await supabase_1.default.getDriverByTelegramId(telegramId);
+            if (!driverResponse.success || !driverResponse.data) {
+                await bot.sendMessage(chatId, messages_1.default.getNotRegisteredMessage());
+                return;
+            }
+            // Update status to off
+            const updateResponse = await supabase_1.default.updateDriverStatus(telegramId, 'off');
+            if (!updateResponse.success) {
+                await bot.sendMessage(chatId, messages_1.default.getErrorMessage('Gagal mengubah status'));
+                return;
+            }
+            await bot.sendMessage(chatId, messages_1.default.getStatusUpdatedMessage('off'));
+        }
+        catch (error) {
+            console.error('❌ Error in /off handler:', error);
+            await bot.sendMessage(chatId, messages_1.default.getErrorMessage('Terjadi kesalahan sistem'));
+        }
+    }
+    // Handle text messages (for registration flow)
+    static async handleTextMessage(bot, msg) {
+        const chatId = msg.chat.id;
+        const telegramId = msg.from?.id.toString();
+        const text = msg.text;
+        if (!telegramId || !text)
+            return;
+        // Check if user is in registration flow
+        if (!sessionManager_1.default.isInRegistrationFlow(telegramId)) {
+            return; // Ignore text messages if not in registration flow
+        }
+        const state = sessionManager_1.default.getRegistrationState(telegramId);
+        console.log(`💬 Text message from ${telegramId} in state: ${state}`);
+        try {
+            switch (state) {
+                case 'waiting_name':
+                    await this.handleNameInput(bot, chatId, telegramId, text);
+                    break;
+                case 'waiting_driver_code':
+                    await this.handleDriverCodeInput(bot, chatId, telegramId, text);
+                    break;
+                case 'waiting_wa':
+                    await this.handleWhatsAppInput(bot, chatId, telegramId, text);
+                    break;
+                default:
+                    break;
+            }
+        }
+        catch (error) {
+            console.error('❌ Error handling text message:', error);
+            await bot.sendMessage(chatId, messages_1.default.getErrorMessage('Terjadi kesalahan sistem'));
+        }
+    }
+    // Handle name input
+    static async handleNameInput(bot, chatId, telegramId, name) {
+        // Validate name (basic validation)
+        if (name.trim().length < 2) {
+            await bot.sendMessage(chatId, '❌ Nama terlalu pendek. Silakan masukkan nama lengkap Anda:');
+            return;
+        }
+        // Update session with name
+        sessionManager_1.default.updateSessionData(telegramId, { name: name.trim() });
+        sessionManager_1.default.setSession(telegramId, 'waiting_driver_code');
+        await bot.sendMessage(chatId, messages_1.default.getDriverCodeMessage());
+    }
+    // Handle driver code input
+    static async handleDriverCodeInput(bot, chatId, telegramId, code) {
+        const driverCode = code.trim().toUpperCase();
+        // Validate driver code
+        const codeResponse = await supabase_1.default.validateDriverCode(driverCode);
+        if (!codeResponse.success) {
+            await bot.sendMessage(chatId, messages_1.default.getInvalidDriverCodeMessage());
+            return;
+        }
+        // Update session with driver code
+        sessionManager_1.default.updateSessionData(telegramId, { driverCode });
+        sessionManager_1.default.setSession(telegramId, 'waiting_wa');
+        await bot.sendMessage(chatId, messages_1.default.getWhatsAppMessage());
+    }
+    // Handle WhatsApp input
+    static async handleWhatsAppInput(bot, chatId, telegramId, phone) {
+        // Validate phone number
+        if (!messages_1.default.isValidPhoneNumber(phone)) {
+            await bot.sendMessage(chatId, messages_1.default.getInvalidWhatsAppMessage());
+            return;
+        }
+        const formattedPhone = messages_1.default.formatPhoneNumber(phone);
+        // Update session with WhatsApp
+        sessionManager_1.default.updateSessionData(telegramId, { whatsapp: formattedPhone });
+        sessionManager_1.default.setSession(telegramId, 'waiting_initial_status');
+        // Get session data for summary
+        const sessionData = sessionManager_1.default.getSessionData(telegramId);
+        if (!sessionData || !sessionData.name || !sessionData.driverCode) {
+            await bot.sendMessage(chatId, messages_1.default.getErrorMessage('Data registrasi tidak lengkap'));
+            return;
+        }
+        // Show registration summary and ask for initial status
+        const summaryMessage = messages_1.default.getRegistrationSummary(sessionData.name, sessionData.driverCode, formattedPhone);
+        await bot.sendMessage(chatId, summaryMessage, {
+            reply_markup: keyboard_1.default.createInitialStatusKeyboard(),
+        });
+    }
+}
+exports.CommandHandlers = CommandHandlers;
+exports.default = CommandHandlers;
+//# sourceMappingURL=commandHandlers.js.map
