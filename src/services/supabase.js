@@ -82,13 +82,67 @@ class SupabaseService {
             return { success: false, error: 'Database error' };
         }
     }
+    static async updateAllDriversStatus(status) {
+        try {
+            const { data, error } = await supabase
+                .from('drivers')
+                .update({ status, updated_at: new Date().toISOString() })
+                .neq('status', status)
+                .select('*');
+            if (error) {
+                console.error('❌ Error updating all drivers status:', error);
+                return { success: false, error: error.message };
+            }
+            return { success: true, data: data || [] };
+        }
+        catch (error) {
+            console.error('❌ Error updating all drivers status:', error);
+            return { success: false, error: 'Database error' };
+        }
+    }
+    static async getEligibleDriversForBroadcast() {
+        try {
+            const { data: drivers, error: driversError } = await supabase
+                .from('drivers')
+                .select('*')
+                .neq('status', 'off');
+            if (driversError) {
+                console.error('❌ Error getting eligible drivers:', driversError);
+                return { success: false, error: driversError.message };
+            }
+            const { data: activeOrders, error: ordersError } = await supabase
+                .from('delivery_orders')
+                .select('assigned_driver')
+                .in('status', ['assigned', 'delivering'])
+                .not('assigned_driver', 'is', null);
+            if (ordersError) {
+                console.error('❌ Error getting active orders for broadcast:', ordersError);
+                return { success: false, error: ordersError.message };
+            }
+            const activeCounts = {};
+            activeOrders?.forEach(order => {
+                if (order.assigned_driver) {
+                    activeCounts[order.assigned_driver] = (activeCounts[order.assigned_driver] || 0) + 1;
+                }
+            });
+            const eligibleDrivers = drivers?.filter(driver => {
+                const count = activeCounts[driver.id] || 0;
+                return count < 5;
+            });
+            return { success: true, data: eligibleDrivers || [] };
+        }
+        catch (error) {
+            console.error('❌ Error getting eligible drivers for broadcast:', error);
+            return { success: false, error: 'Database error' };
+        }
+    }
     // Driver code operations
     static async validateDriverCode(code) {
         try {
             const { data, error } = await supabase
                 .from('driver_codes')
                 .select('*')
-                .eq('code', code)
+                .eq('kode', code)
                 .eq('is_used', false)
                 .single();
             if (error && error.code !== 'PGRST116') {
@@ -105,12 +159,12 @@ class SupabaseService {
             return { success: false, error: 'Database error' };
         }
     }
-    static async markDriverCodeAsUsed(code) {
+    static async markDriverCodeAsUsed(code, usedBy) {
         try {
             const { data, error } = await supabase
                 .from('driver_codes')
-                .update({ is_used: true })
-                .eq('code', code)
+                .update({ is_used: true, used_by: usedBy })
+                .eq('kode', code)
                 .select()
                 .single();
             if (error) {
@@ -150,10 +204,10 @@ class SupabaseService {
                 .from('delivery_orders')
                 .update({
                 status: 'assigned',
-                driver_id: driverId,
+                assigned_driver: driverId,
                 updated_at: new Date().toISOString()
             })
-                .eq('order_id', orderId)
+                .eq('order_code', orderId)
                 .eq('status', 'waiting_driver') // Only assign if still waiting
                 .select()
                 .single();
@@ -177,7 +231,7 @@ class SupabaseService {
             const { data, error } = await supabase
                 .from('delivery_orders')
                 .update({ status, updated_at: new Date().toISOString() })
-                .eq('order_id', orderId)
+                .eq('order_code', orderId)
                 .select()
                 .single();
             if (error) {
@@ -197,7 +251,7 @@ class SupabaseService {
             const { data, error } = await supabase
                 .from('delivery_orders')
                 .select('*')
-                .eq('driver_id', driverId)
+                .eq('assigned_driver', driverId)
                 .in('status', ['assigned', 'delivering'])
                 .order('created_at', { ascending: false });
             if (error) {
@@ -217,7 +271,7 @@ class SupabaseService {
             const { count: totalDeliveries, error: totalError } = await supabase
                 .from('delivery_orders')
                 .select('*', { count: 'exact', head: true })
-                .eq('driver_id', driverId)
+                .eq('assigned_driver', driverId)
                 .eq('status', 'completed');
             if (totalError) {
                 console.error('❌ Error getting total deliveries:', totalError);
@@ -227,7 +281,7 @@ class SupabaseService {
             const { count: activeDeliveries, error: activeError } = await supabase
                 .from('delivery_orders')
                 .select('*', { count: 'exact', head: true })
-                .eq('driver_id', driverId)
+                .eq('assigned_driver', driverId)
                 .in('status', ['assigned', 'delivering']);
             if (activeError) {
                 console.error('❌ Error getting active deliveries:', activeError);
@@ -238,7 +292,7 @@ class SupabaseService {
             const { count: completedToday, error: todayError } = await supabase
                 .from('delivery_orders')
                 .select('*', { count: 'exact', head: true })
-                .eq('driver_id', driverId)
+                .eq('assigned_driver', driverId)
                 .eq('status', 'completed')
                 .gte('updated_at', `${today}T00:00:00.000Z`)
                 .lt('updated_at', `${today}T23:59:59.999Z`);
@@ -246,12 +300,29 @@ class SupabaseService {
                 console.error('❌ Error getting completed today:', todayError);
                 return { success: false, error: todayError.message };
             }
+            // Get today's income (sum of delivery_fee from completed orders)
+            const { data: todayCompletedOrders, error: incomeError } = await supabase
+                .from('delivery_orders')
+                .select('delivery_fee')
+                .eq('assigned_driver', driverId)
+                .eq('status', 'completed')
+                .gte('updated_at', `${today}T00:00:00.000Z`)
+                .lt('updated_at', `${today}T23:59:59.999Z`);
+            if (incomeError) {
+                console.error('❌ Error getting income today:', incomeError);
+                return { success: false, error: incomeError.message };
+            }
+            const totalIncomeToday = (todayCompletedOrders || []).reduce((sum, order) => {
+                const fee = Number(order.delivery_fee || 0);
+                return sum + fee;
+            }, 0);
             return {
                 success: true,
                 data: {
                     totalDeliveries: totalDeliveries || 0,
                     activeDeliveries: activeDeliveries || 0,
                     completedToday: completedToday || 0,
+                    totalIncomeToday,
                 }
             };
         }

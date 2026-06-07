@@ -7,6 +7,8 @@ const node_telegram_bot_api_1 = __importDefault(require("node-telegram-bot-api")
 const config_1 = require("./config");
 const commandHandlers_1 = __importDefault(require("./handlers/commandHandlers"));
 const callbackHandlers_1 = __importDefault(require("./handlers/callbackHandlers"));
+const orderNotifier_1 = __importDefault(require("./services/orderNotifier"));
+const statusScheduler_1 = __importDefault(require("./services/statusScheduler"));
 // Initialize bot
 const bot = new node_telegram_bot_api_1.default(config_1.config.botToken, {
     polling: {
@@ -19,23 +21,49 @@ const bot = new node_telegram_bot_api_1.default(config_1.config.botToken, {
 });
 console.log('🤖 Bot driver Jukut starting...');
 // Set up command handlers
-bot.onText(/\/start/, (msg) => {
+bot.onText(/^\/start$/, (msg) => {
     commandHandlers_1.default.handleStart(bot, msg);
 });
-bot.onText(/\/regist_driver/, (msg) => {
+bot.onText(/^\/regist_driver$/, (msg) => {
     commandHandlers_1.default.handleRegistDriver(bot, msg);
 });
-bot.onText(/\/status/, (msg) => {
+bot.onText(/^\/status$/, (msg) => {
     commandHandlers_1.default.handleStatus(bot, msg);
 });
-bot.onText(/\/standby/, (msg) => {
+bot.onText(/^\/standby$/, (msg) => {
     commandHandlers_1.default.handleStandby(bot, msg);
 });
-bot.onText(/\/off/, (msg) => {
+bot.onText(/^\/off$/, (msg) => {
     commandHandlers_1.default.handleOff(bot, msg);
+});
+bot.onText(/^\/active_orders$/, (msg) => {
+    commandHandlers_1.default.handleActiveOrders(bot, msg);
+});
+bot.onText(/^\/off_all_driver$/, (msg) => {
+    commandHandlers_1.default.handleOffAllDriver(bot, msg);
 });
 // Handle text messages (for registration flow)
 bot.on('message', (msg) => {
+    if (msg.text === '📋 Status Saya') {
+        commandHandlers_1.default.handleStatus(bot, msg);
+        return;
+    }
+    if (msg.text === '🟢 Standby') {
+        commandHandlers_1.default.handleStandby(bot, msg);
+        return;
+    }
+    if (msg.text === '🔴 Off') {
+        commandHandlers_1.default.handleOff(bot, msg);
+        return;
+    }
+    if (msg.text === '🚚 Pesanan Aktif') {
+        commandHandlers_1.default.handleActiveOrders(bot, msg);
+        return;
+    }
+    if (msg.text === '📝 Registrasi Driver') {
+        commandHandlers_1.default.handleRegistDriver(bot, msg);
+        return;
+    }
     // Skip if it's a command (starts with /)
     if (msg.text && !msg.text.startsWith('/')) {
         commandHandlers_1.default.handleTextMessage(bot, msg);
@@ -56,14 +84,20 @@ bot.on('webhook_error', (error) => {
 // Graceful shutdown
 process.on('SIGINT', () => {
     console.log('\n🛑 Shutting down bot...');
+    orderNotifier_1.default.stop();
+    statusScheduler_1.default.stop();
     bot.stopPolling();
     process.exit(0);
 });
 process.on('SIGTERM', () => {
     console.log('\n🛑 Shutting down bot...');
+    orderNotifier_1.default.stop();
+    statusScheduler_1.default.stop();
     bot.stopPolling();
     process.exit(0);
 });
 console.log('✅ Bot driver Jukut is running!');
 console.log('📱 Listening for messages...');
+orderNotifier_1.default.start(bot);
+statusScheduler_1.default.start();
 //# sourceMappingURL=index.js.map

@@ -12,5 +12,8 @@ export declare const config: {
     eta: {
         minutesPerKm: number;
     };
+    spreadsheet: {
+        webhookUrl: string;
+    };
 };
 //# sourceMappingURL=index.d.ts.map

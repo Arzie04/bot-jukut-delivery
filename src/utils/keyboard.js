@@ -4,6 +4,16 @@ exports.KeyboardUtils = void 0;
 const node_telegram_bot_api_1 = require("node-telegram-bot-api");
 const types_1 = require("../types");
 class KeyboardUtils {
+    static createMainMenuKeyboard() {
+        return {
+            keyboard: [
+                [{ text: '📋 Status Saya' }, { text: '🚚 Pesanan Aktif' }],
+                [{ text: '🟢 Standby' }, { text: '🔴 Off' }],
+                [{ text: '📝 Registrasi Driver' }],
+            ],
+            resize_keyboard: true,
+        };
+    }
     // Create inline keyboard for order actions
     static createOrderKeyboard(orderId) {
         const keyboard = [
@@ -48,6 +58,15 @@ class KeyboardUtils {
             ],
         ];
         return { inline_keyboard: keyboard };
+    }
+    static createActiveOrderActionKeyboard(orderId, status) {
+        if (status === 'assigned') {
+            return this.createDeliveryKeyboard(orderId);
+        }
+        if (status === 'delivering') {
+            return this.createCompleteKeyboard(orderId);
+        }
+        return undefined;
     }
     // Create inline keyboard for initial status selection
     static createInitialStatusKeyboard() {

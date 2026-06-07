@@ -8,15 +8,20 @@ const types_1 = require("../types");
 const config_1 = require("../config");
 const keyboard_1 = __importDefault(require("./keyboard"));
 class MessageUtils {
+    static getCustomerName(order) {
+        return order.costumer_name ?? order.customer_name ?? '-';
+    }
+    static getCustomerWa(order) {
+        return order.costumer_wa ?? order.customer_wa ?? '-';
+    }
+    static getDriverNote(order) {
+        return order.note_driver ?? order.note ?? order.catatan_driver ?? '-';
+    }
     // Welcome message for /start command
     static getWelcomeMessage() {
         return `👋 Selamat datang di Driver Bot Ayam Jukut Cabe Ijo
 
-Command tersedia:
-/regist_driver → Registrasi driver
-/status → Lihat status driver
-/standby → Aktif standby
-/off → Nonaktifkan driver`;
+Silakan pilih menu di tombol bawah untuk mulai.`;
     }
     // Registration start message
     static getRegistrationStartMessage() {
@@ -53,46 +58,65 @@ Pilih status awal Anda:`;
         return `🎉 Registrasi berhasil!
 
 👤 Nama: ${driver.nama_driver}
-🔑 Kode Driver: ${driver.kode}
-📱 WhatsApp: ${driver.whatsapp}
+🔑 Kode Driver: ${driver.kode_driver}
+📱 WhatsApp: ${driver.nomor_wa}
 ${statusEmoji} Status: ${statusText}
 
 Selamat bergabung dengan tim driver Ayam Jukut Cabe Ijo!`;
     }
     // Driver status message
-    static getDriverStatusMessage(driver, stats) {
+    static getDriverStatusMessage(driver, stats, activeOrders = []) {
         const statusEmoji = keyboard_1.default.getStatusEmoji(driver.status);
         const statusText = keyboard_1.default.getStatusText(driver.status);
+        let activeOrdersList = '';
+        if (activeOrders.length > 0) {
+            activeOrdersList = '\n\n📦 Pesanan Aktif:\n' + activeOrders.map(order => `- ${order.order_code}`).join('\n');
+        }
+        else {
+            activeOrdersList = '\n\n📦 Pesanan Aktif: Tidak ada';
+        }
         return `📊 Status Driver
 
 👤 Nama: ${driver.nama_driver}
 ${statusEmoji} Status: ${statusText}
-📱 WhatsApp: ${driver.whatsapp}
+📱 WhatsApp: ${driver.nomor_wa}
 
 📈 Statistik:
 🚚 Total Delivery: ${stats.totalDeliveries}
-⚡ Delivery Aktif: ${stats.activeDeliveries}
-📅 Selesai Hari Ini: ${stats.completedToday}`;
+⚡ Delivery Aktif: ${stats.activeDeliveries}/5
+📅 Selesai Hari Ini: ${stats.completedToday}
+💰 Pendapatan Hari Ini: Rp${stats.totalIncomeToday.toLocaleString('id-ID')}${activeOrdersList}`;
     }
     // Order broadcast message
     static getOrderBroadcastMessage(order) {
         const eta = this.calculateETA(order.distance_km);
+        const customerName = this.getCustomerName(order);
         return `🚨 ORDER BARU
-${order.order_id}
+${order.order_code}
 
-👤 Nama: ${order.customer_name}
+👤 Nama: ${customerName}
 🍗 Pesanan: ${order.items}
+🛵 Ongkir: Rp${order.delivery_fee.toLocaleString('id-ID')}
 📍 Jarak: ${order.distance_km} km
-⏱️ ETA: ${eta} menit
-📍 Lokasi: ${order.location}`;
+⏱️ Estimasi: ${eta} menit`;
     }
     // Order assigned message
     static getOrderAssignedMessage(order) {
+        const customerName = this.getCustomerName(order);
+        const customerWa = this.getCustomerWa(order);
+        const customerWaLink = this.getWhatsAppLink(customerWa);
         return `✅ Order berhasil diambil!
 
-${order.order_id}
-👤 ${order.customer_name}
-📍 ${order.location}
+${order.order_code}
+👤 ${customerName}
+📱 WA: ${customerWa}
+💬 Chat WA: ${customerWaLink}
+🍗 Pesanan: ${order.items}
+💵 Total: Rp${order.total_price.toLocaleString('id-ID')}
+🛵 Ongkir: Rp${order.delivery_fee.toLocaleString('id-ID')}
+📍 Jarak: ${order.distance_km} km
+🗺️ ${order.maps_link}
+📝 Catatan: ${this.getDriverNote(order)}
 
 Status: ASSIGNED
 Silakan mulai perjalanan ke lokasi pickup.`;
@@ -105,29 +129,52 @@ Silakan tunggu order berikutnya.`;
     }
     // Delivery started message
     static getDeliveryStartedMessage(order) {
+        const customerName = this.getCustomerName(order);
+        const customerWa = this.getCustomerWa(order);
+        const customerWaLink = this.getWhatsAppLink(customerWa);
         return `🚀 Delivery dimulai!
 
-${order.order_id}
-👤 ${order.customer_name}
-📍 ${order.location}
+${order.order_code}
+👤 ${customerName}
+📱 WA: ${customerWa}
+💬 Chat WA: ${customerWaLink}
+🍗 Pesanan: ${order.items}
+💵 Total: Rp${order.total_price.toLocaleString('id-ID')}
+🛵 Ongkir: Rp${order.delivery_fee.toLocaleString('id-ID')}
+📍 Jarak: ${order.distance_km} km
+🗺️ ${order.maps_link}
+📝 Catatan: ${this.getDriverNote(order)}
 
 Status: DELIVERING
 Hati-hati di jalan!`;
     }
     // Delivery completed message
     static getDeliveryCompletedMessage(order) {
+        const customerName = this.getCustomerName(order);
         return `🎉 Delivery selesai!
 
-${order.order_id}
-👤 ${order.customer_name}
+${order.order_code}
+👤 ${customerName}
 
-Terima kasih sudah melakukan delivery!
-Status Anda kembali ke STANDBY.`;
+Terima kasih sudah melakukan delivery!`;
+    }
+    static getNoActiveOrdersMessage() {
+        return '📦 Tidak ada pesanan aktif saat ini.';
+    }
+    static getActiveOrderItemMessage(order) {
+        const customerName = this.getCustomerName(order);
+        const status = order.status.toUpperCase();
+        return `🚚 Pesanan Aktif
+${order.order_code}
+👤 ${customerName}
+🍗 ${order.items}
+📍 ${order.distance_km} km
+📌 Status: ${status}`;
     }
     // Status updated message
     static getStatusUpdatedMessage(status) {
-        const emoji = status === 'standby' ? '🟢' : '🔴';
-        const text = status === 'standby' ? 'STANDBY' : 'OFF';
+        const emoji = status === 'standby' ? '🟢' : status === 'delivering' ? '🚀' : '🔴';
+        const text = status === 'standby' ? 'STANDBY' : status === 'delivering' ? 'DELIVERING' : 'OFF';
         return `${emoji} Status berhasil diubah ke ${text}`;
     }
     // Error messages
@@ -186,6 +233,22 @@ Gunakan format: 08xxxxxxxxxx atau +62xxxxxxxxxx`;
         return ((cleaned.startsWith('08') && cleaned.length >= 10 && cleaned.length <= 13) ||
             (cleaned.startsWith('628') && cleaned.length >= 11 && cleaned.length <= 14) ||
             (cleaned.startsWith('8') && cleaned.length >= 9 && cleaned.length <= 12));
+    }
+    // Build wa.me link from any common local format.
+    static getWhatsAppLink(phone) {
+        const cleaned = phone.replace(/\D/g, '');
+        if (!cleaned)
+            return '-';
+        if (cleaned.startsWith('0')) {
+            return `https://wa.me/62${cleaned.substring(1)}`;
+        }
+        if (cleaned.startsWith('62')) {
+            return `https://wa.me/${cleaned}`;
+        }
+        if (cleaned.startsWith('8')) {
+            return `https://wa.me/62${cleaned}`;
+        }
+        return `https://wa.me/${cleaned}`;
     }
 }
 exports.MessageUtils = MessageUtils;

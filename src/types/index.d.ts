@@ -7,27 +7,32 @@ export interface Driver {
     telegram_username?: string;
     nama_driver: string;
     kode_driver: string;
-    whatsapp: string;
+    nomor_wa: string;
+    is_verified?: boolean;
     status: DriverStatus;
     created_at?: string;
     updated_at?: string;
 }
 export interface DriverCode {
     id: number;
-    code: string;
+    kode: string;
     is_used: boolean;
+    used_by?: number;
     created_at: string;
 }
 export interface DeliveryOrder {
     id: number;
-    order_id: string;
-    customer_name: string;
+    order_code: string;
+    costumer_name: string;
+    costumer_wa: string;
     items: string;
+    total_price: number;
+    delivery_fee: number;
     distance_km: number;
-    eta_minutes: number;
-    location: string;
+    maps_link: string;
+    note_driver?: string;
     status: OrderStatus;
-    driver_id?: number;
+    assigned_driver?: number;
     created_at: string;
     updated_at: string;
 }
@@ -46,10 +51,10 @@ export interface OrderBroadcastMessage {
     items: string;
     distance: number;
     eta: number;
-    location: string;
+    mapsLink: string;
 }
 export interface CallbackData {
-    action: 'take_order' | 'start_delivery' | 'complete_delivery' | 'set_status';
+    action: 'take_order' | 'start_delivery' | 'complete_delivery' | 'set_status' | 'view_active_orders';
     orderId?: string;
     status?: DriverStatus;
 }
