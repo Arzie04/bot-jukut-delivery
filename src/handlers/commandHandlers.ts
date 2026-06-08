@@ -1,10 +1,10 @@
-import TelegramBot from 'node-telegram-bot-api';
-import SupabaseService from '../services/supabase';
-import DriverStatusSyncService from '../services/driverStatusSync';
-import sessionManager from '../state/sessionManager';
-import MessageUtils from '../utils/messages';
-import KeyboardUtils from '../utils/keyboard';
-import { DriverStatus } from '../types';
+import type TelegramBot from 'node-telegram-bot-api';
+import SupabaseService from '../services/supabase.js';
+import DriverStatusSyncService from '../services/driverStatusSync.js';
+import sessionManager from '../state/sessionManager.js';
+import MessageUtils from '../utils/messages.js';
+import KeyboardUtils from '../utils/keyboard.js';
+import type { DriverStatus } from '../types/index.js';
 
 export class CommandHandlers {
   private static isAdmin(telegramId: string): boolean {

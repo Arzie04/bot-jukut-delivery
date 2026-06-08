@@ -1,4 +1,4 @@
-import TelegramBot from 'node-telegram-bot-api';
+import type TelegramBot from 'node-telegram-bot-api';
 export declare class CommandHandlers {
     private static isAdmin;
     static handleStart(bot: TelegramBot, msg: TelegramBot.Message): Promise<void>;

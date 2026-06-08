@@ -7,10 +7,12 @@
 
     // Environment Settings
     // See also https://aka.ms/tsconfig/module
-    "module": "commonjs",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     // See also https://aka.ms/tsconfig/target
     "target": "esnext",
     "types": ["node"],
+    "esModuleInterop": true,
     "rootDir": "./src",
     "outDir": "./dist",
     // For nodejs:
@@ -43,5 +45,7 @@
     "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
     "skipLibCheck": true,
-  }
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "src/**/*.d.ts", "src/**/*.js", "src/**/*.js.map"]
 }

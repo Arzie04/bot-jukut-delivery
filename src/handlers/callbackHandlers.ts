@@ -1,13 +1,13 @@
-import TelegramBot from 'node-telegram-bot-api';
-import SupabaseService from '../services/supabase';
-import SpreadsheetService from '../services/spreadsheet';
-import DriverStatusSyncService from '../services/driverStatusSync';
-import OrderNotifierService from '../services/orderNotifier';
-import CommandHandlers from './commandHandlers';
-import sessionManager from '../state/sessionManager';
-import MessageUtils from '../utils/messages';
-import KeyboardUtils from '../utils/keyboard';
-import { CallbackData, DriverStatus } from '../types';
+import type TelegramBot from 'node-telegram-bot-api';
+import SupabaseService from '../services/supabase.js';
+import SpreadsheetService from '../services/spreadsheet.js';
+import DriverStatusSyncService from '../services/driverStatusSync.js';
+import OrderNotifierService from '../services/orderNotifier.js';
+import CommandHandlers from './commandHandlers.js';
+import sessionManager from '../state/sessionManager.js';
+import MessageUtils from '../utils/messages.js';
+import KeyboardUtils from '../utils/keyboard.js';
+import type { CallbackData, DeliveryOrder, DriverStatus } from '../types/index.js';
 
 export class CallbackHandlers {
   // Handle callback queries (inline keyboard button clicks)
@@ -261,7 +261,7 @@ export class CallbackHandlers {
       const driver = driverResponse.data;
 
       const activeBefore = await SupabaseService.getDriverActiveOrders(driver.id!);
-      const orderStillActive = activeBefore.data?.find((o) => o.order_code === orderId);
+      const orderStillActive = activeBefore.data?.find((o: DeliveryOrder) => o.order_code === orderId);
       if (!orderStillActive || orderStillActive.status !== 'delivering') {
         await bot.answerCallbackQuery(query.id, { text: '❌ Pesanan belum dalam status pengantaran' });
         return;

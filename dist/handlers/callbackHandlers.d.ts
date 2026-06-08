@@ -1,4 +1,4 @@
-import TelegramBot from 'node-telegram-bot-api';
+import type TelegramBot from 'node-telegram-bot-api';
 export declare class CallbackHandlers {
     static handleCallbackQuery(bot: TelegramBot, query: TelegramBot.CallbackQuery): Promise<void>;
     private static handleSetStatus;
