@@ -1,0 +1,37 @@
+name: Railway Scheduler
+
+on:
+  schedule:
+    # Mati jam 22:00 WIB (15:00 UTC)
+    - cron: '0 15 * * *'
+
+    # Nyala jam 09:00 WIB (02:00 UTC)
+    - cron: '0 2 * * *'
+
+  workflow_dispatch:
+
+jobs:
+  manage:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Determine action
+        id: action
+        run: |
+          HOUR=$(date -u +%H)
+
+          if [ "$HOUR" = "15" ]; then
+            echo "replicas=0" >> $GITHUB_OUTPUT
+          else
+            echo "replicas=1" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Scale Railway Service
+        run: |
+          curl -X POST \
+            https://backboard.railway.app/graphql/v2 \
+            -H "Authorization: Bearer ${{ secrets.5d8c1bb1-0104-4e94-8618-ad232c5f1f9c }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "query":"mutation { serviceInstanceUpdate(input: { projectId: \"${{ secrets.b863e555-af3f-411f-a91a-caffaab25bea }}\", environmentId: \"e17e4bee-69a2-4b7d-a21f-6ec0ffa66cfb\", serviceId: \"${{ secrets.6f314bd9-97c8-4f27-b368-d51109650182 }}\", numReplicas: '${{ steps.action.outputs.replicas }}' }) { id } }"
+            }'
