@@ -19,61 +19,31 @@ const bot = new TelegramBot(config.botToken, {
 console.log('🤖 Bot driver Jukut starting...');
 
 // Set up command handlers
-bot.onText(/^\/start$/, (msg) => {
-  CommandHandlers.handleStart(bot, msg);
-});
+bot.onText(/^\/start$/, (msg) => CommandHandlers.handleStart(bot, msg));
+bot.onText(/^\/regist_driver$/, (msg) => CommandHandlers.handleRegistDriver(bot, msg));
+bot.onText(/^\/status$/, (msg) => CommandHandlers.handleStatus(bot, msg));
+bot.onText(/^\/standby$/, (msg) => CommandHandlers.handleStandby(bot, msg));
+bot.onText(/^\/off$/, (msg) => CommandHandlers.handleOff(bot, msg));
+bot.onText(/^\/active_orders$/, (msg) => CommandHandlers.handleActiveOrders(bot, msg));
 
-bot.onText(/^\/regist_driver$/, (msg) => {
-  CommandHandlers.handleRegistDriver(bot, msg);
-});
+// Admin commands
+bot.onText(/^\/off_all_driver$/, (msg) => CommandHandlers.handleOffAllDriver(bot, msg));
+bot.onText(/^\/listorder$/, (msg) => CommandHandlers.handleListOrder(bot, msg));
+bot.onText(/^\/cekpenghasilan$/, (msg) => CommandHandlers.handleCekPenghasilan(bot, msg));
+bot.onText(/^\/bc (.+)/, (msg, match) => CommandHandlers.handleBroadcast(bot, msg, match));
+bot.onText(/^\/bc-standby (.+)/, (msg, match) => CommandHandlers.handleBroadcastStandby(bot, msg, match));
+bot.onText(/^\/bc-off (.+)/, (msg, match) => CommandHandlers.handleBroadcastOff(bot, msg, match));
 
-bot.onText(/^\/status$/, (msg) => {
-  CommandHandlers.handleStatus(bot, msg);
-});
-
-bot.onText(/^\/standby$/, (msg) => {
-  CommandHandlers.handleStandby(bot, msg);
-});
-
-bot.onText(/^\/off$/, (msg) => {
-  CommandHandlers.handleOff(bot, msg);
-});
-
-bot.onText(/^\/active_orders$/, (msg) => {
-  CommandHandlers.handleActiveOrders(bot, msg);
-});
-
-bot.onText(/^\/off_all_driver$/, (msg) => {
-  CommandHandlers.handleOffAllDriver(bot, msg);
-});
-
-// Handle text messages (for registration flow)
+// Fallback for unknown commands
 bot.on('message', (msg) => {
-  if (msg.text === '📋 Status Saya') {
-    CommandHandlers.handleStatus(bot, msg);
+  if (msg.text?.startsWith('/')) {
+    // This is a command, but it was not caught by any of the specific handlers above.
+    bot.sendMessage(msg.chat.id, '🤔 Perintah tidak dikenali.\n\nSilakan gunakan tombol menu yang tersedia atau ketik /start untuk memulai.');
     return;
   }
-  if (msg.text === '🟢 Standby') {
-    CommandHandlers.handleStandby(bot, msg);
-    return;
-  }
-  if (msg.text === '🔴 Off') {
-    CommandHandlers.handleOff(bot, msg);
-    return;
-  }
-  if (msg.text === '🚚 Pesanan Aktif') {
-    CommandHandlers.handleActiveOrders(bot, msg);
-    return;
-  }
-  if (msg.text === '📝 Registrasi Driver') {
-    CommandHandlers.handleRegistDriver(bot, msg);
-    return;
-  }
-
-  // Skip if it's a command (starts with /)
-  if (msg.text && !msg.text.startsWith('/')) {
-    CommandHandlers.handleTextMessage(bot, msg);
-  }
+  
+  // If it's not a command, process it as a potential registration message.
+  CommandHandlers.handleTextMessage(bot, msg);
 });
 
 // Handle callback queries (inline keyboard button clicks)
@@ -111,4 +81,4 @@ process.on('SIGTERM', () => {
 console.log('✅ Bot driver Jukut is running!');
 console.log('📱 Listening for messages...');
 OrderNotifierService.start(bot);
-StatusSchedulerService.start();
+StatusSchedulerService.start(bot);

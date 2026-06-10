@@ -94,6 +94,54 @@ ${statusEmoji} Status: ${statusText}
 💰 Pendapatan Hari Ini: Rp${stats.totalIncomeToday.toLocaleString('id-ID')}${activeOrdersList}`;
   }
 
+  static getStandbyDriversListMessage(drivers: Driver[]): string {
+    if (drivers.length === 0) {
+      return '🟡 Tidak ada driver yang sedang standby.';
+    }
+
+    const driverList = drivers.map(driver => `• ${driver.nama_driver}`).join('\n');
+    return `🟢 Driver Standby\n\n${driverList}`;
+  }
+
+  static getAdminBroadcastMessage(message: string): string {
+    return `📢 Pengumuman Admin\n\n${message}`;
+  }
+
+  static getDailyIncomeReportMessage(incomeData: { driverName: string; totalIncome: number }[]): string {
+    if (!incomeData || incomeData.length === 0) {
+      return '💸 Tidak ada penghasilan yang tercatat hari ini.';
+    }
+
+    let totalIncome = 0;
+    const reportItems = incomeData.map(item => {
+      totalIncome += item.totalIncome;
+      return `• ${item.driverName} : Rp${item.totalIncome.toLocaleString('id-ID')}`;
+    }).join('\n');
+
+    return `📊 Penghasilan Driver Hari Ini\n\n${reportItems}\n\nTotal: Rp${totalIncome.toLocaleString('id-ID')}`;
+  }
+
+  static getOrderListItemMessage(order: DeliveryOrder): string {
+    let statusLine: string;
+    const driver = (order as any).drivers; // Joined data
+
+    if (driver && order.status !== 'waiting_driver' && order.status !== 'cancelled') {
+      statusLine = `Status: ✅ Sudah diambil\nDriver: ${driver.nama_driver}`;
+    } else {
+      statusLine = `Status: ⏳ Menunggu Driver...`;
+    }
+
+    return `Order #${order.order_code}\n${statusLine}`;
+  }
+
+  static getNoRecentOrdersMessage(): string {
+    return '📦 Tidak ada order baru-baru ini.';
+  }
+
+  static getAutoOffMessage(): string {
+    return '🔔 Waktu operasional telah berakhir. Status Anda diubah secara otomatis menjadi OFF oleh sistem karena outlet sudah tutup.';
+  }
+
   // Order broadcast message
   static getOrderBroadcastMessage(order: DeliveryOrder): string {
     const eta = this.calculateETA(order.distance_km);

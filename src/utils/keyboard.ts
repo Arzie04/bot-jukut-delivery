@@ -2,14 +2,26 @@ import { InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup } from 
 import { CallbackData, DriverStatus } from '../types';
 
 export class KeyboardUtils {
-  static createMainMenuKeyboard(): ReplyKeyboardMarkup {
+  static createDriverMainMenuKeyboard(): ReplyKeyboardMarkup {
     return {
       keyboard: [
-        [{ text: '📋 Status Saya' }, { text: '🚚 Pesanan Aktif' }],
-        [{ text: '🟢 Standby' }, { text: '🔴 Off' }],
-        [{ text: '📝 Registrasi Driver' }],
+        [{ text: '/status' }, { text: '/active_orders' }],
+        [{ text: '/standby' }, { text: '/off' }],
       ],
       resize_keyboard: true,
+      one_time_keyboard: false,
+    };
+  }
+
+  static createAdminMainMenuKeyboard(): ReplyKeyboardMarkup {
+    return {
+      keyboard: [
+        [{ text: '/listorder' }, { text: '/cekpenghasilan' }],
+        [{ text: '/standby' }, { text: '/off_all_driver' }],
+        [{ text: '/bc' }, { text: '/bc-standby' }, { text: '/bc-off' }],
+      ],
+      resize_keyboard: true,
+      one_time_keyboard: false,
     };
   }
 
