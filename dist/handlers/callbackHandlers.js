@@ -101,6 +101,9 @@ class CallbackHandlers {
                 chat_id: chatId,
                 message_id: messageId,
             });
+            await bot.sendMessage(chatId, 'Silakan gunakan tombol menu driver yang tersedia.', {
+                reply_markup: keyboard_js_1.default.createDriverMainMenuKeyboard(),
+            });
             await bot.answerCallbackQuery(query.id, { text: '✅ Registrasi berhasil!' });
         }
         catch (error) {

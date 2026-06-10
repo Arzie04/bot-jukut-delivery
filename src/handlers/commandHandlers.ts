@@ -1,6 +1,5 @@
 import type TelegramBot from 'node-telegram-bot-api';
 import SupabaseService from '../services/supabase.js';
-import DriverStatusSyncService from '../services/driverStatusSync.js';
 import sessionManager from '../state/sessionManager.js';
 import MessageUtils from '../utils/messages.js';
 import KeyboardUtils from '../utils/keyboard.js';
@@ -13,6 +12,13 @@ export class CommandHandlers {
     return ids.includes(telegramId);
   }
 
+  private static async getDynamicDriverKeyboard(telegramId: string) {
+    const driverResponse = await SupabaseService.getDriverByTelegramId(telegramId);
+    return driverResponse.success && driverResponse.data
+      ? KeyboardUtils.createDriverMainMenuKeyboard()
+      : KeyboardUtils.createUnregisteredKeyboard();
+  }
+
   // Handle /start command
   static async handleStart(bot: TelegramBot, msg: TelegramBot.Message): Promise<void> {
     const chatId = msg.chat.id;
@@ -23,13 +29,6 @@ export class CommandHandlers {
     console.log(`📱 /start command from ${telegramId}`);
 
     try {
-      if (this.isAdmin(telegramId)) {
-        await bot.sendMessage(chatId, '👋 Halo Admin! Selamat datang kembali.', {
-          reply_markup: KeyboardUtils.createAdminMainMenuKeyboard(),
-        });
-        return;
-      }
-
       const driverResponse = await SupabaseService.getDriverByTelegramId(telegramId);
       if (driverResponse.success && driverResponse.data) {
         await bot.sendMessage(chatId, MessageUtils.getAlreadyRegisteredMessage(), {
@@ -61,7 +60,9 @@ export class CommandHandlers {
       const driverResponse = await SupabaseService.getDriverByTelegramId(telegramId);
       
       if (driverResponse.success && driverResponse.data) {
-        await bot.sendMessage(chatId, MessageUtils.getAlreadyRegisteredMessage());
+        await bot.sendMessage(chatId, MessageUtils.getAlreadyRegisteredMessage(), {
+          reply_markup: KeyboardUtils.createDriverMainMenuKeyboard(),
+        });
         return;
       }
 
@@ -88,7 +89,9 @@ export class CommandHandlers {
       const driverResponse = await SupabaseService.getDriverByTelegramId(telegramId);
       
       if (!driverResponse.success || !driverResponse.data) {
-        await bot.sendMessage(chatId, MessageUtils.getNotRegisteredMessage());
+        await bot.sendMessage(chatId, MessageUtils.getNotRegisteredMessage(), {
+          reply_markup: KeyboardUtils.createUnregisteredKeyboard(),
+        });
         return;
       }
 
@@ -109,7 +112,9 @@ export class CommandHandlers {
       const stats = statsResponse.data!;
       const statusMessage = MessageUtils.getDriverStatusMessage(driver, stats, activeOrders);
       
-      await bot.sendMessage(chatId, statusMessage);
+      await bot.sendMessage(chatId, statusMessage, {
+        reply_markup: KeyboardUtils.createDriverMainMenuKeyboard(),
+      });
     } catch (error) {
       console.error('❌ Error in /status handler:', error);
       await bot.sendMessage(chatId, MessageUtils.getErrorMessage('Terjadi kesalahan sistem'));
@@ -124,14 +129,18 @@ export class CommandHandlers {
     try {
       const driverResponse = await SupabaseService.getDriverByTelegramId(telegramId);
       if (!driverResponse.success || !driverResponse.data || !driverResponse.data.id) {
-        await bot.sendMessage(chatId, MessageUtils.getNotRegisteredMessage());
+        await bot.sendMessage(chatId, MessageUtils.getNotRegisteredMessage(), {
+          reply_markup: KeyboardUtils.createUnregisteredKeyboard(),
+        });
         return;
       }
 
       const activeOrdersResponse = await SupabaseService.getDriverActiveOrders(driverResponse.data.id);
       const activeOrders = activeOrdersResponse.data || [];
       if (!activeOrders.length) {
-        await bot.sendMessage(chatId, MessageUtils.getNoActiveOrdersMessage());
+        await bot.sendMessage(chatId, MessageUtils.getNoActiveOrdersMessage(), {
+          reply_markup: KeyboardUtils.createDriverMainMenuKeyboard(),
+        });
         return;
       }
 
@@ -156,36 +165,23 @@ export class CommandHandlers {
     console.log(`🟢 /standby command from ${telegramId}`);
 
     try {
-      if (this.isAdmin(telegramId)) {
-        // Admin functionality: List standby drivers
-        const response = await SupabaseService.getDriversByStatus('standby');
-        if (!response.success) {
-          await bot.sendMessage(chatId, MessageUtils.getErrorMessage('Gagal mengambil daftar driver standby.'));
-          return;
-        }
-        const message = MessageUtils.getStandbyDriversListMessage(response.data || []);
-        await bot.sendMessage(chatId, message);
-      } else {
-        // Driver functionality: Set own status to standby
-        const driverResponse = await SupabaseService.getDriverByTelegramId(telegramId);
-        if (!driverResponse.success || !driverResponse.data) {
-          await bot.sendMessage(chatId, MessageUtils.getNotRegisteredMessage());
-          return;
-        }
-
-        const driver = driverResponse.data;
-        if (driver.status === 'off') {
-          await SupabaseService.updateDriverStatus(telegramId, 'standby');
-        }
-
-        const syncResult = await DriverStatusSyncService.syncFromActiveOrders(
-          telegramId,
-          driver.id!,
-          { respectOff: false }
-        );
-
-        await bot.sendMessage(chatId, MessageUtils.getStatusUpdatedMessage(syncResult.status));
+      const driverResponse = await SupabaseService.getDriverByTelegramId(telegramId);
+      if (!driverResponse.success || !driverResponse.data) {
+        await bot.sendMessage(chatId, MessageUtils.getNotRegisteredMessage(), {
+          reply_markup: KeyboardUtils.createUnregisteredKeyboard(),
+        });
+        return;
       }
+
+      const updateResponse = await SupabaseService.updateDriverStatus(telegramId, 'standby');
+      if (!updateResponse.success) {
+        await bot.sendMessage(chatId, MessageUtils.getErrorMessage('Gagal mengubah status'));
+        return;
+      }
+
+      await bot.sendMessage(chatId, MessageUtils.getStatusUpdatedMessage('standby'), {
+        reply_markup: KeyboardUtils.createDriverMainMenuKeyboard(),
+      });
     } catch (error) {
       console.error('❌ Error in /standby handler:', error);
       await bot.sendMessage(chatId, MessageUtils.getErrorMessage('Terjadi kesalahan sistem'));
@@ -206,7 +202,9 @@ export class CommandHandlers {
       const driverResponse = await SupabaseService.getDriverByTelegramId(telegramId);
       
       if (!driverResponse.success || !driverResponse.data) {
-        await bot.sendMessage(chatId, MessageUtils.getNotRegisteredMessage());
+        await bot.sendMessage(chatId, MessageUtils.getNotRegisteredMessage(), {
+          reply_markup: KeyboardUtils.createUnregisteredKeyboard(),
+        });
         return;
       }
 
@@ -218,7 +216,9 @@ export class CommandHandlers {
         return;
       }
 
-      await bot.sendMessage(chatId, MessageUtils.getStatusUpdatedMessage('off'));
+      await bot.sendMessage(chatId, MessageUtils.getStatusUpdatedMessage('off'), {
+        reply_markup: KeyboardUtils.createDriverMainMenuKeyboard(),
+      });
     } catch (error) {
       console.error('❌ Error in /off handler:', error);
       await bot.sendMessage(chatId, MessageUtils.getErrorMessage('Terjadi kesalahan sistem'));
@@ -249,6 +249,23 @@ export class CommandHandlers {
   }
 
   // ============== ADMIN COMMANDS ==============
+
+  static async handleAdmin(bot: TelegramBot, msg: TelegramBot.Message): Promise<void> {
+    const chatId = msg.chat.id;
+    const telegramId = msg.from?.id.toString();
+    if (!telegramId) return;
+
+    if (!this.isAdmin(telegramId)) {
+      await bot.sendMessage(chatId, '⛔ Anda bukan admin dan tidak memiliki akses ke menu ini.', {
+        reply_markup: await this.getDynamicDriverKeyboard(telegramId),
+      });
+      return;
+    }
+
+    await bot.sendMessage(chatId, '🔐 Menu Admin\n\nSilakan pilih perintah yang ingin digunakan.', {
+      reply_markup: KeyboardUtils.createAdminMainMenuKeyboard(),
+    });
+  }
 
   private static async _broadcastMessage(bot: TelegramBot, adminChatId: number, drivers: import('../types').Driver[], message: string, targetGroup: string) {
     if (!drivers || drivers.length === 0) {
@@ -337,6 +354,28 @@ export class CommandHandlers {
     }
   }
 
+  static async handleListStandby(bot: TelegramBot, msg: TelegramBot.Message): Promise<void> {
+    const chatId = msg.chat.id;
+    const telegramId = msg.from?.id.toString();
+    if (!telegramId || !this.isAdmin(telegramId)) {
+      await bot.sendMessage(chatId, '⛔ Anda tidak memiliki izin untuk menggunakan perintah ini.');
+      return;
+    }
+
+    try {
+      const response = await SupabaseService.getDriversByStatus('standby');
+      if (!response.success) {
+        await bot.sendMessage(chatId, MessageUtils.getErrorMessage('Gagal mengambil daftar driver standby.'));
+        return;
+      }
+
+      await bot.sendMessage(chatId, MessageUtils.getStandbyDriversListMessage(response.data || []));
+    } catch (error) {
+      console.error('❌ Error in /list_standby handler:', error);
+      await bot.sendMessage(chatId, MessageUtils.getErrorMessage('Terjadi kesalahan sistem saat mengambil driver standby.'));
+    }
+  }
+
   static async handleBroadcast(bot: TelegramBot, msg: TelegramBot.Message, messageText: string): Promise<void> {
     const chatId = msg.chat.id;
     const telegramId = msg.from?.id.toString();
@@ -374,7 +413,7 @@ export class CommandHandlers {
 
     const message = messageText.trim();
     if (!message) {
-      await bot.sendMessage(chatId, 'Format salah. Gunakan: /bc-standby <pesan>');
+      await bot.sendMessage(chatId, 'Format salah. Gunakan: /bc_standby <pesan>');
       return;
     }
 
@@ -386,7 +425,7 @@ export class CommandHandlers {
       }
       await this._broadcastMessage(bot, chatId, response.data || [], message, 'standby');
     } catch (error) {
-      console.error('❌ Error in /bc-standby handler:', error);
+      console.error('❌ Error in /bc_standby handler:', error);
       await bot.sendMessage(chatId, MessageUtils.getErrorMessage('Terjadi kesalahan sistem saat broadcast.'));
     }
   }
@@ -401,7 +440,7 @@ export class CommandHandlers {
 
     const message = messageText.trim();
     if (!message) {
-      await bot.sendMessage(chatId, 'Format salah. Gunakan: /bc-off <pesan>');
+      await bot.sendMessage(chatId, 'Format salah. Gunakan: /bc_off <pesan>');
       return;
     }
 
@@ -413,7 +452,7 @@ export class CommandHandlers {
       }
       await this._broadcastMessage(bot, chatId, response.data || [], message, 'off');
     } catch (error) {
-      console.error('❌ Error in /bc-off handler:', error);
+      console.error('❌ Error in /bc_off handler:', error);
       await bot.sendMessage(chatId, MessageUtils.getErrorMessage('Terjadi kesalahan sistem saat broadcast.'));
     }
   }

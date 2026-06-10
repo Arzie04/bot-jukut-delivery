@@ -50,10 +50,14 @@ bot.on('message', (msg) => {
         case '/off':
             commandHandlers_1.default.handleOff(bot, msg);
             break;
+        case '/active_order':
         case '/active_orders':
             commandHandlers_1.default.handleActiveOrders(bot, msg);
             break;
         // Admin Commands
+        case '/admin':
+            commandHandlers_1.default.handleAdmin(bot, msg);
+            break;
         case '/off_all_driver':
             commandHandlers_1.default.handleOffAllDriver(bot, msg);
             break;
@@ -63,12 +67,17 @@ bot.on('message', (msg) => {
         case '/cekpenghasilan':
             commandHandlers_1.default.handleCekPenghasilan(bot, msg);
             break;
+        case '/list_standby':
+            commandHandlers_1.default.handleListStandby(bot, msg);
+            break;
         case '/bc':
             commandHandlers_1.default.handleBroadcast(bot, msg, messageText);
             break;
+        case '/bc_standby':
         case '/bc-standby':
             commandHandlers_1.default.handleBroadcastStandby(bot, msg, messageText);
             break;
+        case '/bc_off':
         case '/bc-off':
             commandHandlers_1.default.handleBroadcastOff(bot, msg, messageText);
             break;

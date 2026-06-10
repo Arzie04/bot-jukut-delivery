@@ -5,7 +5,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CommandHandlers = void 0;
 const supabase_js_1 = __importDefault(require("../services/supabase.js"));
-const driverStatusSync_js_1 = __importDefault(require("../services/driverStatusSync.js"));
 const sessionManager_js_1 = __importDefault(require("../state/sessionManager.js"));
 const messages_js_1 = __importDefault(require("../utils/messages.js"));
 const keyboard_js_1 = __importDefault(require("../utils/keyboard.js"));
@@ -15,6 +14,12 @@ class CommandHandlers {
         const ids = raw.split(',').map((id) => id.trim()).filter(Boolean);
         return ids.includes(telegramId);
     }
+    static async getDynamicDriverKeyboard(telegramId) {
+        const driverResponse = await supabase_js_1.default.getDriverByTelegramId(telegramId);
+        return driverResponse.success && driverResponse.data
+            ? keyboard_js_1.default.createDriverMainMenuKeyboard()
+            : keyboard_js_1.default.createUnregisteredKeyboard();
+    }
     // Handle /start command
     static async handleStart(bot, msg) {
         const chatId = msg.chat.id;
@@ -23,12 +28,6 @@ class CommandHandlers {
             return;
         console.log(`📱 /start command from ${telegramId}`);
         try {
-            if (this.isAdmin(telegramId)) {
-                await bot.sendMessage(chatId, '👋 Halo Admin! Selamat datang kembali.', {
-                    reply_markup: keyboard_js_1.default.createAdminMainMenuKeyboard(),
-                });
-                return;
-            }
             const driverResponse = await supabase_js_1.default.getDriverByTelegramId(telegramId);
             if (driverResponse.success && driverResponse.data) {
                 await bot.sendMessage(chatId, messages_js_1.default.getAlreadyRegisteredMessage(), {
@@ -56,7 +55,9 @@ class CommandHandlers {
             // Check if user is already registered
             const driverResponse = await supabase_js_1.default.getDriverByTelegramId(telegramId);
             if (driverResponse.success && driverResponse.data) {
-                await bot.sendMessage(chatId, messages_js_1.default.getAlreadyRegisteredMessage());
+                await bot.sendMessage(chatId, messages_js_1.default.getAlreadyRegisteredMessage(), {
+                    reply_markup: keyboard_js_1.default.createDriverMainMenuKeyboard(),
+                });
                 return;
             }
             // Start registration flow
@@ -79,7 +80,9 @@ class CommandHandlers {
             // Get driver data
             const driverResponse = await supabase_js_1.default.getDriverByTelegramId(telegramId);
             if (!driverResponse.success || !driverResponse.data) {
-                await bot.sendMessage(chatId, messages_js_1.default.getNotRegisteredMessage());
+                await bot.sendMessage(chatId, messages_js_1.default.getNotRegisteredMessage(), {
+                    reply_markup: keyboard_js_1.default.createUnregisteredKeyboard(),
+                });
                 return;
             }
             const driver = driverResponse.data;
@@ -94,7 +97,9 @@ class CommandHandlers {
             const activeOrders = activeOrdersResponse.data || [];
             const stats = statsResponse.data;
             const statusMessage = messages_js_1.default.getDriverStatusMessage(driver, stats, activeOrders);
-            await bot.sendMessage(chatId, statusMessage);
+            await bot.sendMessage(chatId, statusMessage, {
+                reply_markup: keyboard_js_1.default.createDriverMainMenuKeyboard(),
+            });
         }
         catch (error) {
             console.error('❌ Error in /status handler:', error);
@@ -109,13 +114,17 @@ class CommandHandlers {
         try {
             const driverResponse = await supabase_js_1.default.getDriverByTelegramId(telegramId);
             if (!driverResponse.success || !driverResponse.data || !driverResponse.data.id) {
-                await bot.sendMessage(chatId, messages_js_1.default.getNotRegisteredMessage());
+                await bot.sendMessage(chatId, messages_js_1.default.getNotRegisteredMessage(), {
+                    reply_markup: keyboard_js_1.default.createUnregisteredKeyboard(),
+                });
                 return;
             }
             const activeOrdersResponse = await supabase_js_1.default.getDriverActiveOrders(driverResponse.data.id);
             const activeOrders = activeOrdersResponse.data || [];
             if (!activeOrders.length) {
-                await bot.sendMessage(chatId, messages_js_1.default.getNoActiveOrdersMessage());
+                await bot.sendMessage(chatId, messages_js_1.default.getNoActiveOrdersMessage(), {
+                    reply_markup: keyboard_js_1.default.createDriverMainMenuKeyboard(),
+                });
                 return;
             }
             for (const order of activeOrders) {
@@ -137,30 +146,21 @@ class CommandHandlers {
             return;
         console.log(`🟢 /standby command from ${telegramId}`);
         try {
-            if (this.isAdmin(telegramId)) {
-                // Admin functionality: List standby drivers
-                const response = await supabase_js_1.default.getDriversByStatus('standby');
-                if (!response.success) {
-                    await bot.sendMessage(chatId, messages_js_1.default.getErrorMessage('Gagal mengambil daftar driver standby.'));
-                    return;
-                }
-                const message = messages_js_1.default.getStandbyDriversListMessage(response.data || []);
-                await bot.sendMessage(chatId, message);
+            const driverResponse = await supabase_js_1.default.getDriverByTelegramId(telegramId);
+            if (!driverResponse.success || !driverResponse.data) {
+                await bot.sendMessage(chatId, messages_js_1.default.getNotRegisteredMessage(), {
+                    reply_markup: keyboard_js_1.default.createUnregisteredKeyboard(),
+                });
+                return;
             }
-            else {
-                // Driver functionality: Set own status to standby
-                const driverResponse = await supabase_js_1.default.getDriverByTelegramId(telegramId);
-                if (!driverResponse.success || !driverResponse.data) {
-                    await bot.sendMessage(chatId, messages_js_1.default.getNotRegisteredMessage());
-                    return;
-                }
-                const driver = driverResponse.data;
-                if (driver.status === 'off') {
-                    await supabase_js_1.default.updateDriverStatus(telegramId, 'standby');
-                }
-                const syncResult = await driverStatusSync_js_1.default.syncFromActiveOrders(telegramId, driver.id, { respectOff: false });
-                await bot.sendMessage(chatId, messages_js_1.default.getStatusUpdatedMessage(syncResult.status));
+            const updateResponse = await supabase_js_1.default.updateDriverStatus(telegramId, 'standby');
+            if (!updateResponse.success) {
+                await bot.sendMessage(chatId, messages_js_1.default.getErrorMessage('Gagal mengubah status'));
+                return;
             }
+            await bot.sendMessage(chatId, messages_js_1.default.getStatusUpdatedMessage('standby'), {
+                reply_markup: keyboard_js_1.default.createDriverMainMenuKeyboard(),
+            });
         }
         catch (error) {
             console.error('❌ Error in /standby handler:', error);
@@ -178,7 +178,9 @@ class CommandHandlers {
             // Check if user is registered
             const driverResponse = await supabase_js_1.default.getDriverByTelegramId(telegramId);
             if (!driverResponse.success || !driverResponse.data) {
-                await bot.sendMessage(chatId, messages_js_1.default.getNotRegisteredMessage());
+                await bot.sendMessage(chatId, messages_js_1.default.getNotRegisteredMessage(), {
+                    reply_markup: keyboard_js_1.default.createUnregisteredKeyboard(),
+                });
                 return;
             }
             // Update status to off
@@ -187,7 +189,9 @@ class CommandHandlers {
                 await bot.sendMessage(chatId, messages_js_1.default.getErrorMessage('Gagal mengubah status'));
                 return;
             }
-            await bot.sendMessage(chatId, messages_js_1.default.getStatusUpdatedMessage('off'));
+            await bot.sendMessage(chatId, messages_js_1.default.getStatusUpdatedMessage('off'), {
+                reply_markup: keyboard_js_1.default.createDriverMainMenuKeyboard(),
+            });
         }
         catch (error) {
             console.error('❌ Error in /off handler:', error);
@@ -217,6 +221,21 @@ class CommandHandlers {
         }
     }
     // ============== ADMIN COMMANDS ==============
+    static async handleAdmin(bot, msg) {
+        const chatId = msg.chat.id;
+        const telegramId = msg.from?.id.toString();
+        if (!telegramId)
+            return;
+        if (!this.isAdmin(telegramId)) {
+            await bot.sendMessage(chatId, '⛔ Anda bukan admin dan tidak memiliki akses ke menu ini.', {
+                reply_markup: await this.getDynamicDriverKeyboard(telegramId),
+            });
+            return;
+        }
+        await bot.sendMessage(chatId, '🔐 Menu Admin\n\nSilakan pilih perintah yang ingin digunakan.', {
+            reply_markup: keyboard_js_1.default.createAdminMainMenuKeyboard(),
+        });
+    }
     static async _broadcastMessage(bot, adminChatId, drivers, message, targetGroup) {
         if (!drivers || drivers.length === 0) {
             await bot.sendMessage(adminChatId, `🟡 Tidak ada driver dalam kelompok target (${targetGroup}) untuk dikirimi pesan.`);
@@ -294,6 +313,26 @@ class CommandHandlers {
             await bot.sendMessage(chatId, messages_js_1.default.getErrorMessage('Terjadi kesalahan sistem saat memeriksa penghasilan.'));
         }
     }
+    static async handleListStandby(bot, msg) {
+        const chatId = msg.chat.id;
+        const telegramId = msg.from?.id.toString();
+        if (!telegramId || !this.isAdmin(telegramId)) {
+            await bot.sendMessage(chatId, '⛔ Anda tidak memiliki izin untuk menggunakan perintah ini.');
+            return;
+        }
+        try {
+            const response = await supabase_js_1.default.getDriversByStatus('standby');
+            if (!response.success) {
+                await bot.sendMessage(chatId, messages_js_1.default.getErrorMessage('Gagal mengambil daftar driver standby.'));
+                return;
+            }
+            await bot.sendMessage(chatId, messages_js_1.default.getStandbyDriversListMessage(response.data || []));
+        }
+        catch (error) {
+            console.error('❌ Error in /list_standby handler:', error);
+            await bot.sendMessage(chatId, messages_js_1.default.getErrorMessage('Terjadi kesalahan sistem saat mengambil driver standby.'));
+        }
+    }
     static async handleBroadcast(bot, msg, messageText) {
         const chatId = msg.chat.id;
         const telegramId = msg.from?.id.toString();
@@ -328,7 +367,7 @@ class CommandHandlers {
         }
         const message = messageText.trim();
         if (!message) {
-            await bot.sendMessage(chatId, 'Format salah. Gunakan: /bc-standby <pesan>');
+            await bot.sendMessage(chatId, 'Format salah. Gunakan: /bc_standby <pesan>');
             return;
         }
         try {
@@ -340,7 +379,7 @@ class CommandHandlers {
             await this._broadcastMessage(bot, chatId, response.data || [], message, 'standby');
         }
         catch (error) {
-            console.error('❌ Error in /bc-standby handler:', error);
+            console.error('❌ Error in /bc_standby handler:', error);
             await bot.sendMessage(chatId, messages_js_1.default.getErrorMessage('Terjadi kesalahan sistem saat broadcast.'));
         }
     }
@@ -353,7 +392,7 @@ class CommandHandlers {
         }
         const message = messageText.trim();
         if (!message) {
-            await bot.sendMessage(chatId, 'Format salah. Gunakan: /bc-off <pesan>');
+            await bot.sendMessage(chatId, 'Format salah. Gunakan: /bc_off <pesan>');
             return;
         }
         try {
@@ -365,7 +404,7 @@ class CommandHandlers {
             await this._broadcastMessage(bot, chatId, response.data || [], message, 'off');
         }
         catch (error) {
-            console.error('❌ Error in /bc-off handler:', error);
+            console.error('❌ Error in /bc_off handler:', error);
             await bot.sendMessage(chatId, messages_js_1.default.getErrorMessage('Terjadi kesalahan sistem saat broadcast.'));
         }
     }

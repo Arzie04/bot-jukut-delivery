@@ -5,8 +5,8 @@ export class KeyboardUtils {
   static createDriverMainMenuKeyboard(): ReplyKeyboardMarkup {
     return {
       keyboard: [
-        [{ text: '/status' }],
-        [{ text: '/standby' }, { text: '/off' }],
+        [{ text: '/status' }, { text: '/standby' }],
+        [{ text: '/off' }, { text: '/active_order' }],
       ],
       resize_keyboard: true,
       one_time_keyboard: false,
@@ -16,9 +16,10 @@ export class KeyboardUtils {
   static createAdminMainMenuKeyboard(): ReplyKeyboardMarkup {
     return {
       keyboard: [
+        [{ text: '/admin' }],
         [{ text: '/listorder' }, { text: '/cekpenghasilan' }],
-        [{ text: '/standby' }, { text: '/off_all_driver' }],
-        [{ text: '/bc' }, { text: '/bc-standby' }, { text: '/bc-off' }],
+        [{ text: '/list_standby' }, { text: '/off_all_driver' }],
+        [{ text: '/bc' }, { text: '/bc_standby' }, { text: '/bc_off' }],
       ],
       resize_keyboard: true,
       one_time_keyboard: false,

@@ -67,24 +67,18 @@ Selamat bergabung dengan tim driver Ayam Jukut Cabe Ijo!`;
     static getDriverStatusMessage(driver, stats, activeOrders = []) {
         const statusEmoji = keyboard_1.default.getStatusEmoji(driver.status);
         const statusText = keyboard_1.default.getStatusText(driver.status);
-        let activeOrdersList = '';
-        if (activeOrders.length > 0) {
-            activeOrdersList = '\n\n📦 Pesanan Aktif:\n' + activeOrders.map(order => `- ${order.order_code}`).join('\n');
-        }
-        else {
-            activeOrdersList = '\n\n📦 Pesanan Aktif: Tidak ada';
-        }
         return `📊 Status Driver
 
 👤 Nama: ${driver.nama_driver}
 ${statusEmoji} Status: ${statusText}
 📱 WhatsApp: ${driver.nomor_wa}
+📦 Order Aktif: ${activeOrders.length}
 
 📈 Statistik:
 🚚 Total Delivery: ${stats.totalDeliveries}
 ⚡ Delivery Aktif: ${stats.activeDeliveries}/5
 📅 Selesai Hari Ini: ${stats.completedToday}
-💰 Pendapatan Hari Ini: Rp${stats.totalIncomeToday.toLocaleString('id-ID')}${activeOrdersList}`;
+💰 Pendapatan Hari Ini: Rp${stats.totalIncomeToday.toLocaleString('id-ID')}`;
     }
     static getStandbyDriversListMessage(drivers) {
         if (drivers.length === 0) {
@@ -212,7 +206,7 @@ ${order.order_code}
     static getStatusUpdatedMessage(status) {
         const emoji = status === 'standby' ? '🟢' : status === 'delivering' ? '🚀' : '🔴';
         const text = status === 'standby' ? 'STANDBY' : status === 'delivering' ? 'DELIVERING' : 'OFF';
-        return `${emoji} Status berhasil diubah ke ${text}`;
+        return `${emoji} Status Anda sekarang: ${text}.`;
     }
     // Error messages
     static getErrorMessage(error) {
