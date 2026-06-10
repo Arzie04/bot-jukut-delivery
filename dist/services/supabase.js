@@ -64,20 +64,36 @@ class SupabaseService {
             return { success: false, error: 'Database error' };
         }
     }
-    static async getStandbyDrivers() {
+    static async getAllDrivers() {
         try {
             const { data, error } = await supabase
                 .from('drivers')
-                .select('*')
-                .eq('status', 'standby');
+                .select('*');
             if (error) {
-                console.error('❌ Error getting standby drivers:', error);
+                console.error('❌ Error getting all drivers:', error);
                 return { success: false, error: error.message };
             }
             return { success: true, data: data || [] };
         }
         catch (error) {
-            console.error('❌ Error getting standby drivers:', error);
+            console.error('❌ Error getting all drivers:', error);
+            return { success: false, error: 'Database error' };
+        }
+    }
+    static async getDriversByStatus(status) {
+        try {
+            const { data, error } = await supabase
+                .from('drivers')
+                .select('*')
+                .eq('status', status);
+            if (error) {
+                console.error(`❌ Error getting drivers with status ${status}:`, error);
+                return { success: false, error: error.message };
+            }
+            return { success: true, data: data || [] };
+        }
+        catch (error) {
+            console.error(`❌ Error getting drivers with status ${status}:`, error);
             return { success: false, error: 'Database error' };
         }
     }
@@ -179,6 +195,24 @@ class SupabaseService {
         }
     }
     // Delivery order operations
+    static async getRecentOrders(limit = 20) {
+        try {
+            const { data, error } = await supabase
+                .from('delivery_orders')
+                .select('*, drivers(nama_driver)')
+                .order('created_at', { ascending: false })
+                .limit(limit);
+            if (error) {
+                console.error('❌ Error getting recent orders:', error);
+                return { success: false, error: error.message };
+            }
+            return { success: true, data: data || [] };
+        }
+        catch (error) {
+            console.error('❌ Error getting recent orders:', error);
+            return { success: false, error: 'Database error' };
+        }
+    }
     static async getWaitingOrders() {
         try {
             const { data, error } = await supabase
@@ -327,6 +361,45 @@ class SupabaseService {
         }
         catch (error) {
             console.error('❌ Error getting driver stats:', error);
+            return { success: false, error: 'Database error' };
+        }
+    }
+    static async getTodaysIncomeByDriver() {
+        try {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const { data: orders, error } = await supabase
+                .from('delivery_orders')
+                .select('delivery_fee, drivers(id, nama_driver)')
+                .eq('status', 'completed')
+                .not('assigned_driver', 'is', null)
+                .gte('updated_at', today.toISOString())
+                .lt('updated_at', tomorrow.toISOString());
+            if (error) {
+                console.error('❌ Error getting today\'s completed orders:', error);
+                return { success: false, error: error.message };
+            }
+            if (!orders) {
+                return { success: true, data: [] };
+            }
+            const incomeMap = new Map();
+            for (const order of orders) {
+                // The result from Supabase with a join can be an array or a single object
+                const driverInfo = Array.isArray(order.drivers) ? order.drivers[0] : order.drivers;
+                if (driverInfo && driverInfo.nama_driver) {
+                    const currentIncome = incomeMap.get(driverInfo.nama_driver) || 0;
+                    incomeMap.set(driverInfo.nama_driver, currentIncome + (order.delivery_fee || 0));
+                }
+            }
+            const result = Array.from(incomeMap.entries())
+                .map(([driverName, totalIncome]) => ({ driverName, totalIncome }))
+                .filter(item => item.totalIncome > 0); // Filter out drivers with 0 income
+            return { success: true, data: result };
+        }
+        catch (error) {
+            console.error('❌ Error in getTodaysIncomeByDriver:', error);
             return { success: false, error: 'Database error' };
         }
     }

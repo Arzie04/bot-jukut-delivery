@@ -8,6 +8,12 @@ export declare class CommandHandlers {
     static handleStandby(bot: TelegramBot, msg: TelegramBot.Message): Promise<void>;
     static handleOff(bot: TelegramBot, msg: TelegramBot.Message): Promise<void>;
     static handleOffAllDriver(bot: TelegramBot, msg: TelegramBot.Message): Promise<void>;
+    private static _broadcastMessage;
+    static handleListOrder(bot: TelegramBot, msg: TelegramBot.Message): Promise<void>;
+    static handleCekPenghasilan(bot: TelegramBot, msg: TelegramBot.Message): Promise<void>;
+    static handleBroadcast(bot: TelegramBot, msg: TelegramBot.Message, match: RegExpExecArray | null): Promise<void>;
+    static handleBroadcastStandby(bot: TelegramBot, msg: TelegramBot.Message, match: RegExpExecArray | null): Promise<void>;
+    static handleBroadcastOff(bot: TelegramBot, msg: TelegramBot.Message, match: RegExpExecArray | null): Promise<void>;
     static handleTextMessage(bot: TelegramBot, msg: TelegramBot.Message): Promise<void>;
     private static handleNameInput;
     private static handleDriverCodeInput;

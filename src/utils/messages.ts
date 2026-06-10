@@ -123,9 +123,9 @@ ${statusEmoji} Status: ${statusText}
 
   static getOrderListItemMessage(order: DeliveryOrder): string {
     let statusLine: string;
-    const driver = (order as any).drivers; // Joined data
+    const driver = (order as any).drivers; // Joined data from Supabase
 
-    if (driver && order.status !== 'waiting_driver' && order.status !== 'cancelled') {
+    if (driver) {
       statusLine = `Status: ✅ Sudah diambil\nDriver: ${driver.nama_driver}`;
     } else {
       statusLine = `Status: ⏳ Menunggu Driver...`;

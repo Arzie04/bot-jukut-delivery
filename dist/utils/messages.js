@@ -86,6 +86,44 @@ ${statusEmoji} Status: ${statusText}
 📅 Selesai Hari Ini: ${stats.completedToday}
 💰 Pendapatan Hari Ini: Rp${stats.totalIncomeToday.toLocaleString('id-ID')}${activeOrdersList}`;
     }
+    static getStandbyDriversListMessage(drivers) {
+        if (drivers.length === 0) {
+            return '🟡 Tidak ada driver yang sedang standby.';
+        }
+        const driverList = drivers.map(driver => `• ${driver.nama_driver}`).join('\n');
+        return `🟢 Driver Standby\n\n${driverList}`;
+    }
+    static getAdminBroadcastMessage(message) {
+        return `📢 Pengumuman Admin\n\n${message}`;
+    }
+    static getDailyIncomeReportMessage(incomeData) {
+        if (!incomeData || incomeData.length === 0) {
+            return '💸 Tidak ada penghasilan yang tercatat hari ini.';
+        }
+        let totalIncome = 0;
+        const reportItems = incomeData.map(item => {
+            totalIncome += item.totalIncome;
+            return `• ${item.driverName} : Rp${item.totalIncome.toLocaleString('id-ID')}`;
+        }).join('\n');
+        return `📊 Penghasilan Driver Hari Ini\n\n${reportItems}\n\nTotal: Rp${totalIncome.toLocaleString('id-ID')}`;
+    }
+    static getOrderListItemMessage(order) {
+        let statusLine;
+        const driver = order.drivers; // Joined data from Supabase
+        if (driver) {
+            statusLine = `Status: ✅ Sudah diambil\nDriver: ${driver.nama_driver}`;
+        }
+        else {
+            statusLine = `Status: ⏳ Menunggu Driver...`;
+        }
+        return `Order #${order.order_code}\n${statusLine}`;
+    }
+    static getNoRecentOrdersMessage() {
+        return '📦 Tidak ada order baru-baru ini.';
+    }
+    static getAutoOffMessage() {
+        return '🔔 Waktu operasional telah berakhir. Status Anda diubah secara otomatis menjadi OFF oleh sistem karena outlet sudah tutup.';
+    }
     // Order broadcast message
     static getOrderBroadcastMessage(order) {
         const eta = this.calculateETA(order.distance_km);

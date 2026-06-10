@@ -15,6 +15,15 @@ export declare class MessageUtils {
         completedToday: number;
         totalIncomeToday: number;
     }, activeOrders?: DeliveryOrder[]): string;
+    static getStandbyDriversListMessage(drivers: Driver[]): string;
+    static getAdminBroadcastMessage(message: string): string;
+    static getDailyIncomeReportMessage(incomeData: {
+        driverName: string;
+        totalIncome: number;
+    }[]): string;
+    static getOrderListItemMessage(order: DeliveryOrder): string;
+    static getNoRecentOrdersMessage(): string;
+    static getAutoOffMessage(): string;
     static getOrderBroadcastMessage(order: DeliveryOrder): string;
     static getOrderAssignedMessage(order: DeliveryOrder): string;
     static getOrderAlreadyTakenMessage(): string;
