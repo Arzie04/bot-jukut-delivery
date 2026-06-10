@@ -5,7 +5,7 @@ class KeyboardUtils {
     static createDriverMainMenuKeyboard() {
         return {
             keyboard: [
-                [{ text: '/status' }, { text: '/active_orders' }],
+                [{ text: '/status' }],
                 [{ text: '/standby' }, { text: '/off' }],
             ],
             resize_keyboard: true,
@@ -18,6 +18,15 @@ class KeyboardUtils {
                 [{ text: '/listorder' }, { text: '/cekpenghasilan' }],
                 [{ text: '/standby' }, { text: '/off_all_driver' }],
                 [{ text: '/bc' }, { text: '/bc-standby' }, { text: '/bc-off' }],
+            ],
+            resize_keyboard: true,
+            one_time_keyboard: false,
+        };
+    }
+    static createUnregisteredKeyboard() {
+        return {
+            keyboard: [
+                [{ text: '/regist_driver' }],
             ],
             resize_keyboard: true,
             one_time_keyboard: false,

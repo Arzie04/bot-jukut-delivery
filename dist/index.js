@@ -20,29 +20,63 @@ const bot = new node_telegram_bot_api_1.default(config_1.config.botToken, {
     },
 });
 console.log('🤖 Bot driver Jukut starting...');
-// Set up command handlers
-bot.onText(/^\/start$/, (msg) => commandHandlers_1.default.handleStart(bot, msg));
-bot.onText(/^\/regist_driver$/, (msg) => commandHandlers_1.default.handleRegistDriver(bot, msg));
-bot.onText(/^\/status$/, (msg) => commandHandlers_1.default.handleStatus(bot, msg));
-bot.onText(/^\/standby$/, (msg) => commandHandlers_1.default.handleStandby(bot, msg));
-bot.onText(/^\/off$/, (msg) => commandHandlers_1.default.handleOff(bot, msg));
-bot.onText(/^\/active_orders$/, (msg) => commandHandlers_1.default.handleActiveOrders(bot, msg));
-// Admin commands
-bot.onText(/^\/off_all_driver$/, (msg) => commandHandlers_1.default.handleOffAllDriver(bot, msg));
-bot.onText(/^\/listorder$/, (msg) => commandHandlers_1.default.handleListOrder(bot, msg));
-bot.onText(/^\/cekpenghasilan$/, (msg) => commandHandlers_1.default.handleCekPenghasilan(bot, msg));
-bot.onText(/^\/bc (.+)/, (msg, match) => commandHandlers_1.default.handleBroadcast(bot, msg, match));
-bot.onText(/^\/bc-standby (.+)/, (msg, match) => commandHandlers_1.default.handleBroadcastStandby(bot, msg, match));
-bot.onText(/^\/bc-off (.+)/, (msg, match) => commandHandlers_1.default.handleBroadcastOff(bot, msg, match));
-// Fallback for unknown commands
+// Set up a unified message handler to route all commands and text
 bot.on('message', (msg) => {
-    if (msg.text?.startsWith('/')) {
-        // This is a command, but it was not caught by any of the specific handlers above.
-        bot.sendMessage(msg.chat.id, '🤔 Perintah tidak dikenali.\n\nSilakan gunakan tombol menu yang tersedia atau ketik /start untuk memulai.');
+    const text = msg.text;
+    if (!text)
+        return;
+    // If the message is not a command, pass it to the text message handler (for registration)
+    if (!text.startsWith('/')) {
+        commandHandlers_1.default.handleTextMessage(bot, msg);
         return;
     }
-    // If it's not a command, process it as a potential registration message.
-    commandHandlers_1.default.handleTextMessage(bot, msg);
+    // Parse command and arguments
+    const [command, ...args] = text.split(' ');
+    const messageText = args.join(' ');
+    switch (command) {
+        // General Commands
+        case '/start':
+            commandHandlers_1.default.handleStart(bot, msg);
+            break;
+        case '/regist_driver':
+            commandHandlers_1.default.handleRegistDriver(bot, msg);
+            break;
+        case '/status':
+            commandHandlers_1.default.handleStatus(bot, msg);
+            break;
+        case '/standby':
+            commandHandlers_1.default.handleStandby(bot, msg);
+            break;
+        case '/off':
+            commandHandlers_1.default.handleOff(bot, msg);
+            break;
+        case '/active_orders':
+            commandHandlers_1.default.handleActiveOrders(bot, msg);
+            break;
+        // Admin Commands
+        case '/off_all_driver':
+            commandHandlers_1.default.handleOffAllDriver(bot, msg);
+            break;
+        case '/listorder':
+            commandHandlers_1.default.handleListOrder(bot, msg);
+            break;
+        case '/cekpenghasilan':
+            commandHandlers_1.default.handleCekPenghasilan(bot, msg);
+            break;
+        case '/bc':
+            commandHandlers_1.default.handleBroadcast(bot, msg, messageText);
+            break;
+        case '/bc-standby':
+            commandHandlers_1.default.handleBroadcastStandby(bot, msg, messageText);
+            break;
+        case '/bc-off':
+            commandHandlers_1.default.handleBroadcastOff(bot, msg, messageText);
+            break;
+        // Fallback for unknown commands
+        default:
+            bot.sendMessage(msg.chat.id, '🤔 Perintah tidak dikenali.\n\nSilakan gunakan tombol menu yang tersedia atau ketik /start untuk memulai.');
+            break;
+    }
 });
 // Handle callback queries (inline keyboard button clicks)
 bot.on('callback_query', (query) => {

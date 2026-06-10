@@ -337,7 +337,7 @@ export class CommandHandlers {
     }
   }
 
-  static async handleBroadcast(bot: TelegramBot, msg: TelegramBot.Message, match: RegExpExecArray | null): Promise<void> {
+  static async handleBroadcast(bot: TelegramBot, msg: TelegramBot.Message, messageText: string): Promise<void> {
     const chatId = msg.chat.id;
     const telegramId = msg.from?.id.toString();
     if (!telegramId || !this.isAdmin(telegramId)) {
@@ -345,7 +345,7 @@ export class CommandHandlers {
       return;
     }
 
-    const message = match?.[1]?.trim();
+    const message = messageText.trim();
     if (!message) {
       await bot.sendMessage(chatId, 'Format salah. Gunakan: /bc <pesan>');
       return;
@@ -364,7 +364,7 @@ export class CommandHandlers {
     }
   }
 
-  static async handleBroadcastStandby(bot: TelegramBot, msg: TelegramBot.Message, match: RegExpExecArray | null): Promise<void> {
+  static async handleBroadcastStandby(bot: TelegramBot, msg: TelegramBot.Message, messageText: string): Promise<void> {
     const chatId = msg.chat.id;
     const telegramId = msg.from?.id.toString();
     if (!telegramId || !this.isAdmin(telegramId)) {
@@ -372,7 +372,7 @@ export class CommandHandlers {
       return;
     }
 
-    const message = match?.[1]?.trim();
+    const message = messageText.trim();
     if (!message) {
       await bot.sendMessage(chatId, 'Format salah. Gunakan: /bc-standby <pesan>');
       return;
@@ -391,7 +391,7 @@ export class CommandHandlers {
     }
   }
 
-  static async handleBroadcastOff(bot: TelegramBot, msg: TelegramBot.Message, match: RegExpExecArray | null): Promise<void> {
+  static async handleBroadcastOff(bot: TelegramBot, msg: TelegramBot.Message, messageText: string): Promise<void> {
     const chatId = msg.chat.id;
     const telegramId = msg.from?.id.toString();
     if (!telegramId || !this.isAdmin(telegramId)) {
@@ -399,7 +399,7 @@ export class CommandHandlers {
       return;
     }
 
-    const message = match?.[1]?.trim();
+    const message = messageText.trim();
     if (!message) {
       await bot.sendMessage(chatId, 'Format salah. Gunakan: /bc-off <pesan>');
       return;

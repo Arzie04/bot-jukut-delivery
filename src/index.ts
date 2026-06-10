@@ -33,9 +33,6 @@ bot.on('message', (msg) => {
   const [command, ...args] = text.split(' ');
   const messageText = args.join(' ');
 
-  // Create a fake 'match' array for handlers that expect it (e.g., broadcast)
-  const match: RegExpExecArray = [text, messageText] as RegExpExecArray;
-
   switch (command) {
     // General Commands
     case '/start':
@@ -68,13 +65,13 @@ bot.on('message', (msg) => {
       CommandHandlers.handleCekPenghasilan(bot, msg);
       break;
     case '/bc':
-      CommandHandlers.handleBroadcast(bot, msg, match);
+      CommandHandlers.handleBroadcast(bot, msg, messageText);
       break;
     case '/bc-standby':
-      CommandHandlers.handleBroadcastStandby(bot, msg, match);
+      CommandHandlers.handleBroadcastStandby(bot, msg, messageText);
       break;
     case '/bc-off':
-      CommandHandlers.handleBroadcastOff(bot, msg, match);
+      CommandHandlers.handleBroadcastOff(bot, msg, messageText);
       break;
 
     // Fallback for unknown commands

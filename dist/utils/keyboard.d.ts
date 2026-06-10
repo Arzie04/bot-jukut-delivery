@@ -3,6 +3,7 @@ import { CallbackData, DriverStatus } from '../types';
 export declare class KeyboardUtils {
     static createDriverMainMenuKeyboard(): ReplyKeyboardMarkup;
     static createAdminMainMenuKeyboard(): ReplyKeyboardMarkup;
+    static createUnregisteredKeyboard(): ReplyKeyboardMarkup;
     static createOrderKeyboard(orderId: string): InlineKeyboardMarkup;
     static createDeliveryKeyboard(orderId: string): InlineKeyboardMarkup;
     static createCompleteKeyboard(orderId: string): InlineKeyboardMarkup;
