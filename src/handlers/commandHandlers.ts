@@ -23,33 +23,23 @@ export class CommandHandlers {
     console.log(`📱 /start command from ${telegramId}`);
 
     try {
-      const isAdmin = this.isAdmin(telegramId);
-      if (isAdmin) {
+      if (this.isAdmin(telegramId)) {
         await bot.sendMessage(chatId, '👋 Halo Admin! Selamat datang kembali.', {
           reply_markup: KeyboardUtils.createAdminMainMenuKeyboard(),
         });
         return;
       }
 
-      // Check if user is already registered
       const driverResponse = await SupabaseService.getDriverByTelegramId(telegramId);
-      
       if (driverResponse.success && driverResponse.data) {
-        // User is already registered
         await bot.sendMessage(chatId, MessageUtils.getAlreadyRegisteredMessage(), {
           reply_markup: KeyboardUtils.createDriverMainMenuKeyboard(),
         });
         return;
       }
 
-      // Send welcome message for new users
       await bot.sendMessage(chatId, MessageUtils.getWelcomeMessage(), {
-        reply_markup: {
-          keyboard: [
-            [{ text: '/regist_driver' }],
-          ],
-          resize_keyboard: true,
-        }
+        reply_markup: KeyboardUtils.createUnregisteredKeyboard(),
       });
     } catch (error) {
       console.error('❌ Error in /start handler:', error);
@@ -166,8 +156,8 @@ export class CommandHandlers {
     console.log(`🟢 /standby command from ${telegramId}`);
 
     try {
-      // Admin functionality: List standby drivers
       if (this.isAdmin(telegramId)) {
+        // Admin functionality: List standby drivers
         const response = await SupabaseService.getDriversByStatus('standby');
         if (!response.success) {
           await bot.sendMessage(chatId, MessageUtils.getErrorMessage('Gagal mengambil daftar driver standby.'));
@@ -175,28 +165,27 @@ export class CommandHandlers {
         }
         const message = MessageUtils.getStandbyDriversListMessage(response.data || []);
         await bot.sendMessage(chatId, message);
-        return;
+      } else {
+        // Driver functionality: Set own status to standby
+        const driverResponse = await SupabaseService.getDriverByTelegramId(telegramId);
+        if (!driverResponse.success || !driverResponse.data) {
+          await bot.sendMessage(chatId, MessageUtils.getNotRegisteredMessage());
+          return;
+        }
+
+        const driver = driverResponse.data;
+        if (driver.status === 'off') {
+          await SupabaseService.updateDriverStatus(telegramId, 'standby');
+        }
+
+        const syncResult = await DriverStatusSyncService.syncFromActiveOrders(
+          telegramId,
+          driver.id!,
+          { respectOff: false }
+        );
+
+        await bot.sendMessage(chatId, MessageUtils.getStatusUpdatedMessage(syncResult.status));
       }
-
-      // Driver functionality: Set own status to standby
-      const driverResponse = await SupabaseService.getDriverByTelegramId(telegramId);
-      if (!driverResponse.success || !driverResponse.data) {
-        await bot.sendMessage(chatId, MessageUtils.getNotRegisteredMessage());
-        return;
-      }
-
-      const driver = driverResponse.data;
-      if (driver.status === 'off') {
-        await SupabaseService.updateDriverStatus(telegramId, 'standby');
-      }
-
-      const syncResult = await DriverStatusSyncService.syncFromActiveOrders(
-        telegramId,
-        driver.id!,
-        { respectOff: false }
-      );
-
-      await bot.sendMessage(chatId, MessageUtils.getStatusUpdatedMessage(syncResult.status));
     } catch (error) {
       console.error('❌ Error in /standby handler:', error);
       await bot.sendMessage(chatId, MessageUtils.getErrorMessage('Terjadi kesalahan sistem'));

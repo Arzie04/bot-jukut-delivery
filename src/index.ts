@@ -18,32 +18,70 @@ const bot = new TelegramBot(config.botToken, {
 
 console.log('🤖 Bot driver Jukut starting...');
 
-// Set up command handlers
-bot.onText(/^\/start$/, (msg) => CommandHandlers.handleStart(bot, msg));
-bot.onText(/^\/regist_driver$/, (msg) => CommandHandlers.handleRegistDriver(bot, msg));
-bot.onText(/^\/status$/, (msg) => CommandHandlers.handleStatus(bot, msg));
-bot.onText(/^\/standby$/, (msg) => CommandHandlers.handleStandby(bot, msg));
-bot.onText(/^\/off$/, (msg) => CommandHandlers.handleOff(bot, msg));
-bot.onText(/^\/active_orders$/, (msg) => CommandHandlers.handleActiveOrders(bot, msg));
-
-// Admin commands
-bot.onText(/^\/off_all_driver$/, (msg) => CommandHandlers.handleOffAllDriver(bot, msg));
-bot.onText(/^\/listorder$/, (msg) => CommandHandlers.handleListOrder(bot, msg));
-bot.onText(/^\/cekpenghasilan$/, (msg) => CommandHandlers.handleCekPenghasilan(bot, msg));
-bot.onText(/^\/bc (.+)/, (msg, match) => CommandHandlers.handleBroadcast(bot, msg, match));
-bot.onText(/^\/bc-standby (.+)/, (msg, match) => CommandHandlers.handleBroadcastStandby(bot, msg, match));
-bot.onText(/^\/bc-off (.+)/, (msg, match) => CommandHandlers.handleBroadcastOff(bot, msg, match));
-
-// Fallback for unknown commands
+// Set up a unified message handler to route all commands and text
 bot.on('message', (msg) => {
-  if (msg.text?.startsWith('/')) {
-    // This is a command, but it was not caught by any of the specific handlers above.
-    bot.sendMessage(msg.chat.id, '🤔 Perintah tidak dikenali.\n\nSilakan gunakan tombol menu yang tersedia atau ketik /start untuk memulai.');
+  const text = msg.text;
+  if (!text) return;
+
+  // If the message is not a command, pass it to the text message handler (for registration)
+  if (!text.startsWith('/')) {
+    CommandHandlers.handleTextMessage(bot, msg);
     return;
   }
-  
-  // If it's not a command, process it as a potential registration message.
-  CommandHandlers.handleTextMessage(bot, msg);
+
+  // Parse command and arguments
+  const [command, ...args] = text.split(' ');
+  const messageText = args.join(' ');
+
+  // Create a fake 'match' array for handlers that expect it (e.g., broadcast)
+  const match: RegExpExecArray = [text, messageText] as RegExpExecArray;
+
+  switch (command) {
+    // General Commands
+    case '/start':
+      CommandHandlers.handleStart(bot, msg);
+      break;
+    case '/regist_driver':
+      CommandHandlers.handleRegistDriver(bot, msg);
+      break;
+    case '/status':
+      CommandHandlers.handleStatus(bot, msg);
+      break;
+    case '/standby':
+      CommandHandlers.handleStandby(bot, msg);
+      break;
+    case '/off':
+      CommandHandlers.handleOff(bot, msg);
+      break;
+    case '/active_orders':
+      CommandHandlers.handleActiveOrders(bot, msg);
+      break;
+
+    // Admin Commands
+    case '/off_all_driver':
+      CommandHandlers.handleOffAllDriver(bot, msg);
+      break;
+    case '/listorder':
+      CommandHandlers.handleListOrder(bot, msg);
+      break;
+    case '/cekpenghasilan':
+      CommandHandlers.handleCekPenghasilan(bot, msg);
+      break;
+    case '/bc':
+      CommandHandlers.handleBroadcast(bot, msg, match);
+      break;
+    case '/bc-standby':
+      CommandHandlers.handleBroadcastStandby(bot, msg, match);
+      break;
+    case '/bc-off':
+      CommandHandlers.handleBroadcastOff(bot, msg, match);
+      break;
+
+    // Fallback for unknown commands
+    default:
+      bot.sendMessage(msg.chat.id, '🤔 Perintah tidak dikenali.\n\nSilakan gunakan tombol menu yang tersedia atau ketik /start untuk memulai.');
+      break;
+  }
 });
 
 // Handle callback queries (inline keyboard button clicks)
