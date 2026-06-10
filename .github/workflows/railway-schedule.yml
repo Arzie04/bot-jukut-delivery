@@ -30,8 +30,8 @@ jobs:
         run: |
           curl -X POST \
             https://backboard.railway.app/graphql/v2 \
-            -H "Authorization: Bearer ${{ secrets.5d8c1bb1-0104-4e94-8618-ad232c5f1f9c }}" \
+            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d '{
-              "query":"mutation { serviceInstanceUpdate(input: { projectId: \"${{ secrets.b863e555-af3f-411f-a91a-caffaab25bea }}\", environmentId: \"e17e4bee-69a2-4b7d-a21f-6ec0ffa66cfb\", serviceId: \"${{ secrets.6f314bd9-97c8-4f27-b368-d51109650182 }}\", numReplicas: '${{ steps.action.outputs.replicas }}' }) { id } }"
+              "query":"mutation { serviceInstanceUpdate(input: { projectId: \"${{ secrets.RAILWAY_PROJECT_ID }}\", environmentId: \"${{ secrets.RAILWAY_ENVIRONMENT_ID }}\", serviceId: \"${{ secrets.RAILWAY_SERVICE_ID }}\", numReplicas: '${{ steps.action.outputs.replicas }}' }) { id } }"
             }'
