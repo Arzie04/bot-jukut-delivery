@@ -4,11 +4,18 @@ on:
   schedule:
     # Mati jam 22:00 WIB (15:00 UTC)
     - cron: '0 15 * * *'
-
     # Nyala jam 09:00 WIB (02:00 UTC)
     - cron: '0 2 * * *'
-
+  
   workflow_dispatch:
+    inputs:
+      action:
+        description: 'Manual Trigger (Pilih aksi)'
+        required: true
+        type: choice
+        options:
+          - start
+          - stop
 
 jobs:
   manage:
@@ -18,20 +25,31 @@ jobs:
       - name: Determine action
         id: action
         run: |
-          HOUR=$(date -u +%H)
-
-          if [ "$HOUR" = "15" ]; then
+          # Cek apakah dipicu oleh Cron jam 15:00 UTC ATAU dipicu manual dengan pilihan 'stop'
+          if [ "${{ github.event.schedule }}" = "0 15 * * *" ] || [ "${{ github.event.inputs.action }}" = "stop" ]; then
             echo "replicas=0" >> $GITHUB_OUTPUT
+            echo "Aksi: MATIKAN BOT (Replicas = 0)"
           else
             echo "replicas=1" >> $GITHUB_OUTPUT
+            echo "Aksi: NYALAKAN BOT (Replicas = 1)"
           fi
 
       - name: Scale Railway Service
         run: |
-          curl -X POST \
+          # Simpan respons dari Railway ke dalam variabel
+          RESPONSE=$(curl -s -X POST \
             https://backboard.railway.app/graphql/v2 \
             -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d '{
               "query":"mutation { serviceInstanceUpdate(input: { projectId: \"${{ secrets.RAILWAY_PROJECT_ID }}\", environmentId: \"${{ secrets.RAILWAY_ENVIRONMENT_ID }}\", serviceId: \"${{ secrets.RAILWAY_SERVICE_ID }}\", numReplicas: '${{ steps.action.outputs.replicas }}' }) { id } }"
-            }'
+            }')
+          
+          # Tampilkan respons di log GitHub Actions
+          echo "Respons dari Railway: $RESPONSE"
+          
+          # Jika respons mengandung kata "errors", gagalkan GitHub Action ini
+          if echo "$RESPONSE" | grep -q "errors"; then
+            echo "Terjadi error pada GraphQL Railway! Cek pesan di atas."
+            exit 1
+          fi
