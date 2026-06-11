@@ -25,7 +25,6 @@ jobs:
       - name: Determine action
         id: action
         run: |
-          # Cek apakah dipicu oleh Cron jam 15:00 UTC ATAU dipicu manual dengan pilihan 'stop'
           if [ "${{ github.event.schedule }}" = "0 15 * * *" ] || [ "${{ github.event.inputs.action }}" = "stop" ]; then
             echo "replicas=0" >> $GITHUB_OUTPUT
             echo "Aksi: MATIKAN BOT (Replicas = 0)"
@@ -36,19 +35,16 @@ jobs:
 
       - name: Scale Railway Service
         run: |
-          # Simpan respons dari Railway ke dalam variabel
           RESPONSE=$(curl -s -X POST \
             https://backboard.railway.app/graphql/v2 \
             -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d '{
-              "query":"mutation { serviceInstanceUpdate(input: { projectId: \"${{ secrets.RAILWAY_PROJECT_ID }}\", environmentId: \"${{ secrets.RAILWAY_ENVIRONMENT_ID }}\", serviceId: \"${{ secrets.RAILWAY_SERVICE_ID }}\", numReplicas: '${{ steps.action.outputs.replicas }}' }) { id } }"
+              "query":"mutation { serviceInstanceUpdate(serviceId: \"${{ secrets.RAILWAY_SERVICE_ID }}\", environmentId: \"${{ secrets.RAILWAY_ENVIRONMENT_ID }}\", input: { numReplicas: '${{ steps.action.outputs.replicas }}' }) }"
             }')
           
-          # Tampilkan respons di log GitHub Actions
           echo "Respons dari Railway: $RESPONSE"
           
-          # Jika respons mengandung kata "errors", gagalkan GitHub Action ini
           if echo "$RESPONSE" | grep -q "errors"; then
             echo "Terjadi error pada GraphQL Railway! Cek pesan di atas."
             exit 1
