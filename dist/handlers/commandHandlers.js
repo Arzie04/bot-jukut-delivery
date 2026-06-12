@@ -8,6 +8,7 @@ const supabase_js_1 = __importDefault(require("../services/supabase.js"));
 const sessionManager_js_1 = __importDefault(require("../state/sessionManager.js"));
 const messages_js_1 = __importDefault(require("../utils/messages.js"));
 const keyboard_js_1 = __importDefault(require("../utils/keyboard.js"));
+const employeeHandlers_js_1 = __importDefault(require("./employeeHandlers.js"));
 class CommandHandlers {
     static isAdmin(telegramId) {
         const raw = process.env.ADMIN_TELEGRAM_IDS || '';
@@ -61,7 +62,7 @@ class CommandHandlers {
                 return;
             }
             // Start registration flow
-            sessionManager_js_1.default.setSession(telegramId, 'waiting_name');
+            sessionManager_js_1.default.setSession(telegramId, 'driver', 'waiting_name');
             await bot.sendMessage(chatId, messages_js_1.default.getRegistrationStartMessage());
         }
         catch (error) {
@@ -232,9 +233,7 @@ class CommandHandlers {
             });
             return;
         }
-        await bot.sendMessage(chatId, '🔐 Menu Admin\n\nSilakan pilih perintah yang ingin digunakan.', {
-            reply_markup: keyboard_js_1.default.createAdminMainMenuKeyboard(),
-        });
+        await bot.sendMessage(chatId, '🔐 Menu Admin\n\nDriver: /listorder, /cekpenghasilan, /bc...\nKaryawan: /buat_jadwal, /list_gaji, /general_cleaning, /generate_code\n\nSilakan pilih perintah di tombol bawah.', { reply_markup: keyboard_js_1.default.createAdminMainMenuKeyboard() });
     }
     static async _broadcastMessage(bot, adminChatId, drivers, message, targetGroup) {
         if (!drivers || drivers.length === 0) {
@@ -418,9 +417,14 @@ class CommandHandlers {
         if (text.startsWith('/')) {
             return;
         }
-        // Check if user is in registration flow
+        // Delegate employee & admin schedule text flows
+        if (sessionManager_js_1.default.isInEmployeeFlow(telegramId) || sessionManager_js_1.default.isInAdminScheduleFlow(telegramId)) {
+            await employeeHandlers_js_1.default.handleTextMessage(bot, msg);
+            return;
+        }
+        // Check if user is in driver registration flow
         if (!sessionManager_js_1.default.isInRegistrationFlow(telegramId)) {
-            return; // Ignore text messages if not in registration flow
+            return;
         }
         const state = sessionManager_js_1.default.getRegistrationState(telegramId);
         console.log(`💬 Text message from ${telegramId} in state: ${state}`);
@@ -453,7 +457,7 @@ class CommandHandlers {
         }
         // Update session with name
         sessionManager_js_1.default.updateSessionData(telegramId, { name: name.trim() });
-        sessionManager_js_1.default.setSession(telegramId, 'waiting_driver_code');
+        sessionManager_js_1.default.setSession(telegramId, 'driver', 'waiting_driver_code');
         await bot.sendMessage(chatId, messages_js_1.default.getDriverCodeMessage());
     }
     // Handle driver code input
@@ -467,7 +471,7 @@ class CommandHandlers {
         }
         // Update session with driver code
         sessionManager_js_1.default.updateSessionData(telegramId, { driverCode });
-        sessionManager_js_1.default.setSession(telegramId, 'waiting_wa');
+        sessionManager_js_1.default.setSession(telegramId, 'driver', 'waiting_wa');
         await bot.sendMessage(chatId, messages_js_1.default.getWhatsAppMessage());
     }
     // Handle WhatsApp input
@@ -480,7 +484,7 @@ class CommandHandlers {
         const formattedPhone = messages_js_1.default.formatPhoneNumber(phone);
         // Update session with WhatsApp
         sessionManager_js_1.default.updateSessionData(telegramId, { whatsapp: formattedPhone });
-        sessionManager_js_1.default.setSession(telegramId, 'waiting_initial_status');
+        sessionManager_js_1.default.setSession(telegramId, 'driver', 'waiting_initial_status');
         // Get session data for summary
         const sessionData = sessionManager_js_1.default.getSessionData(telegramId);
         if (!sessionData || !sessionData.name || !sessionData.driverCode) {

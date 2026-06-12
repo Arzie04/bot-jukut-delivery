@@ -21,6 +21,10 @@ export const config = {
       process.env.SPREADSHEET_WEBHOOK_URL ||
       'https://script.google.com/macros/s/AKfycbxe5xK7fOwhC2Z4Z3khcjZ5n0N3e_-qsXwigNPeHXyDtFu2aXZqon3aIdI58Aqkciej/exec',
   },
+  employeeGroupChatId: process.env.EMPLOYEE_GROUP_CHAT_ID || '',
+  payroll: {
+    shiftRate: 45000,
+  },
 };
 
 // Validate required environment variables

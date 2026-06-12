@@ -1,6 +1,10 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.KeyboardUtils = void 0;
+const scheduleService_js_1 = __importDefault(require("../services/scheduleService.js"));
 class KeyboardUtils {
     static createDriverMainMenuKeyboard() {
         return {
@@ -18,6 +22,8 @@ class KeyboardUtils {
                 [{ text: '/admin' }],
                 [{ text: '/listorder' }, { text: '/cekpenghasilan' }],
                 [{ text: '/list_standby' }, { text: '/off_all_driver' }],
+                [{ text: '/buat_jadwal' }, { text: '/list_gaji' }],
+                [{ text: '/general_cleaning' }, { text: '/generate_code' }],
                 [{ text: '/bc' }, { text: '/bc_standby' }, { text: '/bc_off' }],
             ],
             resize_keyboard: true,
@@ -108,6 +114,61 @@ class KeyboardUtils {
             ],
         ];
         return { inline_keyboard: keyboard };
+    }
+    static createScheduleSwapKeyboard(slots) {
+        const buttons = slots
+            .filter((s) => s.id)
+            .map((s) => {
+            const name = scheduleService_js_1.default.getEmployeeFromSchedule(s)?.nama || 'Karyawan';
+            return {
+                text: `🔄 Request Tukar ${name}`,
+                callback_data: JSON.stringify({
+                    action: 'request_swap',
+                    scheduleId: s.id,
+                }),
+            };
+        });
+        const rows = [];
+        for (let i = 0; i < buttons.length; i += 2) {
+            rows.push(buttons.slice(i, i + 2));
+        }
+        return { inline_keyboard: rows };
+    }
+    static createSwapActionKeyboard(swapRequestId) {
+        return {
+            inline_keyboard: [
+                [
+                    {
+                        text: '✅ Ambil',
+                        callback_data: JSON.stringify({
+                            action: 'take_shift',
+                            swapRequestId,
+                        }),
+                    },
+                    {
+                        text: '🔁 Tukar',
+                        callback_data: JSON.stringify({
+                            action: 'swap_shift',
+                            swapRequestId,
+                        }),
+                    },
+                ],
+            ],
+        };
+    }
+    static createGeneralCleaningKeyboard() {
+        return {
+            inline_keyboard: [
+                [
+                    {
+                        text: '✅ Ambil',
+                        callback_data: JSON.stringify({
+                            action: 'take_gc',
+                        }),
+                    },
+                ],
+            ],
+        };
     }
     // Parse callback data safely
     static parseCallbackData(data) {

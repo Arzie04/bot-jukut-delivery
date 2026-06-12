@@ -1,4 +1,4 @@
-import { DeliveryOrder, Driver } from '../types';
+import { DeliveryOrder, Driver, PayrollEntry } from '../types';
 export declare class MessageUtils {
     private static getCustomerName;
     private static getCustomerWa;
@@ -41,6 +41,37 @@ export declare class MessageUtils {
     private static calculateETA;
     static formatPhoneNumber(phone: string): string;
     static isValidPhoneNumber(phone: string): boolean;
+    static getEmployeeRegistrationStartMessage(): string;
+    static getEmployeeCodeMessage(): string;
+    static getRekeningPromptMessage(): string;
+    static getEmployeeRegistrationCompleteMessage(employee: {
+        nama: string;
+        no_wa: string;
+        rekening_info: string;
+    }): string;
+    static getEmployeeAlreadyRegisteredMessage(): string;
+    static getInvalidEmployeeCodeMessage(): string;
+    static getShiftLimitPromptMessage(): string;
+    static getScheduleCreatedMessage(totalSlots: number, shiftLimit: number): string;
+    static getScheduleGenerationFailedMessage(shiftLimit: number, employeeCount: number): string;
+    static getScheduleHeaderMessage(week: {
+        start: string;
+        end: string;
+    }): string;
+    static getEmptyScheduleMessage(): string;
+    static getSwapRequestMessage(requesterName: string, dayName: string, dateDisplay: string, shiftLabel: string): string;
+    static getSwapTakenMessage(takerName: string, dayName: string, shiftLabel: string): string;
+    static getSwapCompletedMessage(name1: string, name2: string): string;
+    static getGeneralCleaningPromptMessage(): string;
+    static getGeneralCleaningTakenMessage(names: string[]): string;
+    static getGeneralCleaningFullMessage(): string;
+    static getPayrollReportMessage(entries: PayrollEntry[], week: {
+        start: string;
+        end: string;
+    }): string;
+    static getGeneratedCodeMessage(code: string, type: string): string;
+    static getGroupOnlyCommandMessage(): string;
+    static getPrivateOnlyCommandMessage(): string;
     static getWhatsAppLink(phone: string): string;
 }
 export default MessageUtils;

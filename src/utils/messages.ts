@@ -1,4 +1,5 @@
-import { DeliveryOrder, Driver } from '../types';
+import { DeliveryOrder, Driver, PayrollEntry } from '../types';
+import ScheduleService from '../services/scheduleService.js';
 import { config } from '../config';
 import KeyboardUtils from './keyboard';
 
@@ -306,6 +307,154 @@ Gunakan format: 08xxxxxxxxxx atau +62xxxxxxxxxx`;
       (cleaned.startsWith('628') && cleaned.length >= 11 && cleaned.length <= 14) ||
       (cleaned.startsWith('8') && cleaned.length >= 9 && cleaned.length <= 12)
     );
+  }
+
+  // ============== EMPLOYEE MESSAGES ==============
+
+  static getEmployeeRegistrationStartMessage(): string {
+    return `📝 Registrasi Karyawan
+
+Silakan masukkan nama lengkap Anda:`;
+  }
+
+  static getEmployeeCodeMessage(): string {
+    return `🔑 Masukkan kode verifikasi karyawan:
+
+Kode diberikan oleh admin.`;
+  }
+
+  static getRekeningPromptMessage(): string {
+    return `💳 Masukkan info rekening atau e-wallet:
+
+Contoh: BNI 123456789 atau Gopay 081234567890`;
+  }
+
+  static getEmployeeRegistrationCompleteMessage(employee: { nama: string; no_wa: string; rekening_info: string }): string {
+    return `🎉 Registrasi karyawan berhasil!
+
+👤 Nama: ${employee.nama}
+📱 WhatsApp: ${employee.no_wa}
+💳 Rekening: ${employee.rekening_info}
+
+Anda sudah terdaftar dan terverifikasi.`;
+  }
+
+  static getEmployeeAlreadyRegisteredMessage(): string {
+    return `✅ Anda sudah terdaftar sebagai karyawan.`;
+  }
+
+  static getInvalidEmployeeCodeMessage(): string {
+    return `❌ Kode verifikasi tidak valid atau sudah digunakan.
+
+Silakan hubungi admin untuk mendapatkan kode yang benar.`;
+  }
+
+  static getShiftLimitPromptMessage(): string {
+    return `📅 Buat Jadwal Mingguan
+
+Masukkan *Shift Limit* per karyawan (berapa maksimal shift per orang dalam seminggu):
+
+Contoh: 2`;
+  }
+
+  static getScheduleCreatedMessage(totalSlots: number, shiftLimit: number): string {
+    return `✅ Jadwal mingguan berhasil dibuat!
+
+📊 Total slot: ${totalSlots}
+📌 Batas shift per orang: ${shiftLimit}`;
+  }
+
+  static getScheduleGenerationFailedMessage(shiftLimit: number, employeeCount: number): string {
+    return `❌ Gagal membuat jadwal.
+
+Karyawan terverifikasi: ${employeeCount}
+Batas shift: ${shiftLimit}
+
+Pastikan jumlah karyawan cukup dan batas shift realistis.`;
+  }
+
+  static getScheduleHeaderMessage(week: { start: string; end: string }): string {
+    const startDisplay = ScheduleService.formatDateDisplay(week.start);
+    const endDisplay = ScheduleService.formatDateDisplay(week.end);
+    return `📅 *Jadwal Minggu Ini*
+${startDisplay} – ${endDisplay}
+
+Klik "Request Tukar" di samping nama untuk melepas atau menukar shift.`;
+  }
+
+  static getEmptyScheduleMessage(): string {
+    return `📅 Belum ada jadwal untuk minggu ini.
+
+Admin dapat membuat jadwal dengan /buat_jadwal di chat pribadi.`;
+  }
+
+  static getSwapRequestMessage(
+    requesterName: string,
+    dayName: string,
+    dateDisplay: string,
+    shiftLabel: string
+  ): string {
+    return `🔄 *${requesterName}* ingin melepas/menukar jadwal *${dayName}, ${dateDisplay} — ${shiftLabel}*.
+
+Ada yang mau ambil?`;
+  }
+
+  static getSwapTakenMessage(takerName: string, dayName: string, shiftLabel: string): string {
+    return `✅ *${takerName}* mengambil shift ${dayName} (${shiftLabel}).`;
+  }
+
+  static getSwapCompletedMessage(name1: string, name2: string): string {
+    return `🔁 Tukar jadwal berhasil antara *${name1}* dan *${name2}*.`;
+  }
+
+  static getGeneralCleaningPromptMessage(): string {
+    return `🧹 *General Cleaning Hari Ini*
+
+Siapa mau ambil General Cleaning hari ini?
+(Maksimal 2 orang)`;
+  }
+
+  static getGeneralCleaningTakenMessage(names: string[]): string {
+    return `✅ General Cleaning hari ini diambil oleh:\n${names.map((n) => `• ${n}`).join('\n')}`;
+  }
+
+  static getGeneralCleaningFullMessage(): string {
+    return `🧹 General Cleaning hari ini sudah penuh (2 orang).`;
+  }
+
+  static getPayrollReportMessage(entries: PayrollEntry[], week: { start: string; end: string }): string {
+    if (entries.length === 0) {
+      return `💰 Belum ada data gaji untuk minggu ${ScheduleService.formatDateDisplay(week.start)} – ${ScheduleService.formatDateDisplay(week.end)}.`;
+    }
+
+    const lines = entries.map((e) => {
+      const gaji = e.totalGaji.toLocaleString('id-ID');
+      const gcSuffix = e.gcCount > 0 ? ' + GC' : '';
+      return `${e.nama}: ${gaji}${gcSuffix}, ${e.rekeningInfo}`;
+    });
+
+    return `💰 *Laporan Gaji Minggu Ini*
+${ScheduleService.formatDateDisplay(week.start)} – ${ScheduleService.formatDateDisplay(week.end)}
+
+${lines.join('\n')}
+
+_Rumus: (Total Shift × Rp45.000) + label GC jika ikut General Cleaning_`;
+  }
+
+  static getGeneratedCodeMessage(code: string, type: string): string {
+    return `🔑 Kode verifikasi *${type}* berhasil dibuat:
+
+\`${code}\`
+
+Bagikan kode ini kepada ${type === 'driver' ? 'driver' : 'karyawan'} yang akan registrasi.`;
+  }
+
+  static getGroupOnlyCommandMessage(): string {
+    return `ℹ️ Perintah ini hanya tersedia di grup karyawan.`;
+  }
+
+  static getPrivateOnlyCommandMessage(): string {
+    return `ℹ️ Perintah ini hanya tersedia di chat pribadi dengan bot.`;
   }
 
   // Build wa.me link from any common local format.

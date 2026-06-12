@@ -2,8 +2,11 @@ import TelegramBot from 'node-telegram-bot-api';
 import { config } from './config';
 import CommandHandlers from './handlers/commandHandlers';
 import CallbackHandlers from './handlers/callbackHandlers';
+import EmployeeHandlers from './handlers/employeeHandlers';
 import OrderNotifierService from './services/orderNotifier';
 import StatusSchedulerService from './services/statusScheduler';
+import { isGroupChat, isPrivateChat } from './utils/auth';
+import MessageUtils from './utils/messages';
 
 // Initialize bot
 const bot = new TelegramBot(config.botToken, { 
@@ -23,15 +26,40 @@ bot.on('message', (msg) => {
   const text = msg.text;
   if (!text) return;
 
-  // If the message is not a command, pass it to the text message handler (for registration)
+  const chatType = msg.chat.type;
+  const isPrivate = isPrivateChat(chatType);
+  const isGroup = isGroupChat(chatType);
+
+  // Non-command text: registration flows (private only)
   if (!text.startsWith('/')) {
-    CommandHandlers.handleTextMessage(bot, msg);
+    if (isPrivate) {
+      CommandHandlers.handleTextMessage(bot, msg);
+    }
     return;
   }
 
   // Parse command and arguments
   const [command, ...args] = text.split(' ');
   const messageText = args.join(' ');
+
+  // Group chat commands
+  if (isGroup) {
+    switch (command) {
+      case '/jadwal':
+        EmployeeHandlers.handleJadwal(bot, msg);
+        break;
+      case '/start':
+        bot.sendMessage(msg.chat.id, '👋 Halo! Gunakan /jadwal untuk melihat jadwal mingguan.');
+        break;
+      default:
+        bot.sendMessage(msg.chat.id, '🤔 Perintah grup tidak dikenali.\n\nGunakan /jadwal untuk melihat jadwal mingguan.');
+        break;
+    }
+    return;
+  }
+
+  // Private chat commands
+  if (!isPrivate) return;
 
   switch (command) {
     // General Commands
@@ -55,7 +83,27 @@ bot.on('message', (msg) => {
       CommandHandlers.handleActiveOrders(bot, msg);
       break;
 
-    // Admin Commands
+    // Employee Commands (private)
+    case '/regist_karyawan':
+      EmployeeHandlers.handleRegistKaryawan(bot, msg);
+      break;
+    case '/buat_jadwal':
+      EmployeeHandlers.handleBuatJadwal(bot, msg);
+      break;
+    case '/general_cleaning':
+      EmployeeHandlers.handleGeneralCleaning(bot, msg);
+      break;
+    case '/list_gaji':
+      EmployeeHandlers.handleListGaji(bot, msg);
+      break;
+    case '/generate_code':
+      EmployeeHandlers.handleGenerateCode(bot, msg, messageText.trim() || undefined);
+      break;
+    case '/jadwal':
+      EmployeeHandlers.handleJadwal(bot, msg);
+      break;
+
+    // Admin Commands (driver)
     case '/admin':
       CommandHandlers.handleAdmin(bot, msg);
       break;
@@ -85,7 +133,7 @@ bot.on('message', (msg) => {
 
     // Fallback for unknown commands
     default:
-      bot.sendMessage(msg.chat.id, '🤔 Perintah tidak dikenali.\n\nSilakan gunakan tombol menu yang tersedia atau ketik /start untuk memulai.');
+      bot.sendMessage(msg.chat.id, MessageUtils.getErrorMessage('Perintah tidak dikenali') + '\n\nSilakan gunakan tombol menu yang tersedia atau ketik /start untuk memulai.');
       break;
   }
 });

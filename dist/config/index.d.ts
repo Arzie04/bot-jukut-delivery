@@ -15,5 +15,9 @@ export declare const config: {
     spreadsheet: {
         webhookUrl: string;
     };
+    employeeGroupChatId: string;
+    payroll: {
+        shiftRate: number;
+    };
 };
 //# sourceMappingURL=index.d.ts.map

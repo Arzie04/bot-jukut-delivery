@@ -1,5 +1,6 @@
 import { InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup } from 'node-telegram-bot-api';
-import { CallbackData, DriverStatus } from '../types';
+import { CallbackData, DriverStatus, Schedule } from '../types';
+import ScheduleService from '../services/scheduleService.js';
 
 export class KeyboardUtils {
   static createDriverMainMenuKeyboard(): ReplyKeyboardMarkup {
@@ -19,6 +20,8 @@ export class KeyboardUtils {
         [{ text: '/admin' }],
         [{ text: '/listorder' }, { text: '/cekpenghasilan' }],
         [{ text: '/list_standby' }, { text: '/off_all_driver' }],
+        [{ text: '/buat_jadwal' }, { text: '/list_gaji' }],
+        [{ text: '/general_cleaning' }, { text: '/generate_code' }],
         [{ text: '/bc' }, { text: '/bc_standby' }, { text: '/bc_off' }],
       ],
       resize_keyboard: true,
@@ -119,6 +122,66 @@ export class KeyboardUtils {
     ];
 
     return { inline_keyboard: keyboard };
+  }
+
+  static createScheduleSwapKeyboard(slots: Schedule[]): InlineKeyboardMarkup {
+    const buttons: InlineKeyboardButton[] = slots
+      .filter((s) => s.id)
+      .map((s) => {
+        const name = ScheduleService.getEmployeeFromSchedule(s)?.nama || 'Karyawan';
+        return {
+          text: `🔄 Request Tukar ${name}`,
+          callback_data: JSON.stringify({
+            action: 'request_swap',
+            scheduleId: s.id,
+          } as CallbackData),
+        };
+      });
+
+    const rows: InlineKeyboardButton[][] = [];
+    for (let i = 0; i < buttons.length; i += 2) {
+      rows.push(buttons.slice(i, i + 2));
+    }
+
+    return { inline_keyboard: rows };
+  }
+
+  static createSwapActionKeyboard(swapRequestId: number): InlineKeyboardMarkup {
+    return {
+      inline_keyboard: [
+        [
+          {
+            text: '✅ Ambil',
+            callback_data: JSON.stringify({
+              action: 'take_shift',
+              swapRequestId,
+            } as CallbackData),
+          },
+          {
+            text: '🔁 Tukar',
+            callback_data: JSON.stringify({
+              action: 'swap_shift',
+              swapRequestId,
+            } as CallbackData),
+          },
+        ],
+      ],
+    };
+  }
+
+  static createGeneralCleaningKeyboard(): InlineKeyboardMarkup {
+    return {
+      inline_keyboard: [
+        [
+          {
+            text: '✅ Ambil',
+            callback_data: JSON.stringify({
+              action: 'take_gc',
+            } as CallbackData),
+          },
+        ],
+      ],
+    };
   }
 
   // Parse callback data safely

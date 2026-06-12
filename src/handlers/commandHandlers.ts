@@ -4,6 +4,7 @@ import sessionManager from '../state/sessionManager.js';
 import MessageUtils from '../utils/messages.js';
 import KeyboardUtils from '../utils/keyboard.js';
 import type { DriverStatus } from '../types/index.js';
+import EmployeeHandlers from './employeeHandlers.js';
 
 export class CommandHandlers {
   private static isAdmin(telegramId: string): boolean {
@@ -67,7 +68,7 @@ export class CommandHandlers {
       }
 
       // Start registration flow
-      sessionManager.setSession(telegramId, 'waiting_name');
+      sessionManager.setSession(telegramId, 'driver', 'waiting_name');
       await bot.sendMessage(chatId, MessageUtils.getRegistrationStartMessage());
     } catch (error) {
       console.error('❌ Error in /regist_driver handler:', error);
@@ -262,9 +263,11 @@ export class CommandHandlers {
       return;
     }
 
-    await bot.sendMessage(chatId, '🔐 Menu Admin\n\nSilakan pilih perintah yang ingin digunakan.', {
-      reply_markup: KeyboardUtils.createAdminMainMenuKeyboard(),
-    });
+    await bot.sendMessage(
+      chatId,
+      '🔐 Menu Admin\n\nDriver: /listorder, /cekpenghasilan, /bc...\nKaryawan: /buat_jadwal, /list_gaji, /general_cleaning, /generate_code\n\nSilakan pilih perintah di tombol bawah.',
+      { reply_markup: KeyboardUtils.createAdminMainMenuKeyboard() }
+    );
   }
 
   private static async _broadcastMessage(bot: TelegramBot, adminChatId: number, drivers: import('../types').Driver[], message: string, targetGroup: string) {
@@ -468,9 +471,15 @@ export class CommandHandlers {
       return;
     }
 
-    // Check if user is in registration flow
+    // Delegate employee & admin schedule text flows
+    if (sessionManager.isInEmployeeFlow(telegramId) || sessionManager.isInAdminScheduleFlow(telegramId)) {
+      await EmployeeHandlers.handleTextMessage(bot, msg);
+      return;
+    }
+
+    // Check if user is in driver registration flow
     if (!sessionManager.isInRegistrationFlow(telegramId)) {
-      return; // Ignore text messages if not in registration flow
+      return;
     }
     const state = sessionManager.getRegistrationState(telegramId);
     console.log(`💬 Text message from ${telegramId} in state: ${state}`);
@@ -505,7 +514,7 @@ export class CommandHandlers {
 
     // Update session with name
     sessionManager.updateSessionData(telegramId, { name: name.trim() });
-    sessionManager.setSession(telegramId, 'waiting_driver_code');
+    sessionManager.setSession(telegramId, 'driver', 'waiting_driver_code');
 
     await bot.sendMessage(chatId, MessageUtils.getDriverCodeMessage());
   }
@@ -524,7 +533,7 @@ export class CommandHandlers {
 
     // Update session with driver code
     sessionManager.updateSessionData(telegramId, { driverCode });
-    sessionManager.setSession(telegramId, 'waiting_wa');
+    sessionManager.setSession(telegramId, 'driver', 'waiting_wa');
 
     await bot.sendMessage(chatId, MessageUtils.getWhatsAppMessage());
   }
@@ -541,7 +550,7 @@ export class CommandHandlers {
     
     // Update session with WhatsApp
     sessionManager.updateSessionData(telegramId, { whatsapp: formattedPhone });
-    sessionManager.setSession(telegramId, 'waiting_initial_status');
+    sessionManager.setSession(telegramId, 'driver', 'waiting_initial_status');
 
     // Get session data for summary
     const sessionData = sessionManager.getSessionData(telegramId);

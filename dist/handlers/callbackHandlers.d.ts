@@ -4,6 +4,10 @@ export declare class CallbackHandlers {
     private static handleSetStatus;
     private static handleTakeOrder;
     private static handleStartDelivery;
+    private static handleRequestSwap;
+    private static handleTakeShift;
+    private static handleSwapShift;
+    private static handleTakeGeneralCleaning;
     private static handleCompleteDelivery;
 }
 export default CallbackHandlers;

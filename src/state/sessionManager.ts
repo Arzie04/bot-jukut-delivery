@@ -1,19 +1,23 @@
-import { UserSession, RegistrationState } from '../types';
+import type { UserSession, RegistrationState, EmployeeRegistrationState, AdminScheduleState, SessionFlow } from '../types';
 
 class SessionManager {
   private sessions: Map<string, UserSession> = new Map();
 
-  // Get user session
   getSession(telegramId: string): UserSession | null {
     return this.sessions.get(telegramId) || null;
   }
 
-  // Create or update session
-  setSession(telegramId: string, state: RegistrationState, data: Partial<UserSession['data']> = {}): void {
+  setSession(
+    telegramId: string,
+    flow: SessionFlow,
+    state: UserSession['state'],
+    data: Partial<UserSession['data']> = {}
+  ): void {
     const existingSession = this.sessions.get(telegramId);
-    
+
     const session: UserSession = {
       telegramId,
+      flow,
       state,
       data: {
         ...existingSession?.data,
@@ -22,10 +26,9 @@ class SessionManager {
     };
 
     this.sessions.set(telegramId, session);
-    console.log(`📝 Session updated for ${telegramId}: ${state}`, session.data);
+    console.log(`📝 Session updated for ${telegramId} [${flow}]: ${state}`, session.data);
   }
 
-  // Update session data
   updateSessionData(telegramId: string, data: Partial<UserSession['data']>): void {
     const session = this.sessions.get(telegramId);
     if (session) {
@@ -35,46 +38,62 @@ class SessionManager {
     }
   }
 
-  // Clear session
   clearSession(telegramId: string): void {
     this.sessions.delete(telegramId);
     console.log(`🗑️ Session cleared for ${telegramId}`);
   }
 
-  // Check if user is in registration flow
   isInRegistrationFlow(telegramId: string): boolean {
     const session = this.sessions.get(telegramId);
-    return session ? session.state !== 'completed' : false;
+    if (!session) return false;
+    return session.state !== 'completed' && session.state !== 'employee_completed';
   }
 
-  // Get current registration state
+  isInEmployeeFlow(telegramId: string): boolean {
+    const session = this.sessions.get(telegramId);
+    return session?.flow === 'employee' && session.state !== 'employee_completed';
+  }
+
+  isInAdminScheduleFlow(telegramId: string): boolean {
+    const session = this.sessions.get(telegramId);
+    return session?.flow === 'admin_schedule';
+  }
+
+  getFlow(telegramId: string): SessionFlow | null {
+    return this.sessions.get(telegramId)?.flow || null;
+  }
+
   getRegistrationState(telegramId: string): RegistrationState | null {
     const session = this.sessions.get(telegramId);
-    return session ? session.state : null;
+    if (!session || session.flow !== 'driver') return null;
+    return session.state as RegistrationState;
   }
 
-  // Get session data
+  getEmployeeState(telegramId: string): EmployeeRegistrationState | null {
+    const session = this.sessions.get(telegramId);
+    if (!session || session.flow !== 'employee') return null;
+    return session.state as EmployeeRegistrationState;
+  }
+
+  getAdminScheduleState(telegramId: string): AdminScheduleState | null {
+    const session = this.sessions.get(telegramId);
+    if (!session || session.flow !== 'admin_schedule') return null;
+    return session.state as AdminScheduleState;
+  }
+
   getSessionData(telegramId: string): UserSession['data'] | null {
     const session = this.sessions.get(telegramId);
     return session ? session.data : null;
   }
 
-  // Get all active sessions (for debugging)
   getAllSessions(): Map<string, UserSession> {
     return new Map(this.sessions);
   }
 
-  // Clean up old sessions (optional - can be called periodically)
-  cleanupOldSessions(maxAgeHours: number = 24): void {
-    const now = Date.now();
-    const maxAge = maxAgeHours * 60 * 60 * 1000; // Convert to milliseconds
-
-    // Note: This is a simple cleanup. In production, you might want to store timestamps
-    // For now, we'll just log the cleanup attempt
+  cleanupOldSessions(): void {
     console.log(`🧹 Session cleanup attempted (${this.sessions.size} active sessions)`);
   }
 }
 
-// Export singleton instance
 export const sessionManager = new SessionManager();
 export default sessionManager;

@@ -1,6 +1,20 @@
 import { createClient } from '@supabase/supabase-js';
 import { config } from '../config';
-import { Driver, DriverCode, DeliveryOrder, DriverStatus, OrderStatus, ApiResponse } from '../types';
+import {
+  Driver,
+  DriverCode,
+  DeliveryOrder,
+  DriverStatus,
+  OrderStatus,
+  ApiResponse,
+  Employee,
+  VerificationCode,
+  VerificationCodeType,
+  Schedule,
+  GeneralCleaningLog,
+  SwapRequest,
+  PayrollEntry,
+} from '../types';
 
 // Create Supabase client
 const supabase = createClient(config.supabase.url, config.supabase.serviceRoleKey);
@@ -406,6 +420,480 @@ export class SupabaseService {
       return { success: false, error: 'Database error' };
     }
   }
+  // ============== EMPLOYEE OPERATIONS ==============
+
+  static async getEmployeeByTelegramId(telegramId: string): Promise<ApiResponse<Employee>> {
+    try {
+      const { data, error } = await supabase
+        .from('employees')
+        .select('*')
+        .eq('telegram_id', telegramId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('❌ Error getting employee:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data: data || null };
+    } catch (error) {
+      console.error('❌ Error getting employee:', error);
+      return { success: false, error: 'Database error' };
+    }
+  }
+
+  static async createEmployee(employee: Omit<Employee, 'id' | 'created_at'>): Promise<ApiResponse<Employee>> {
+    try {
+      const { data, error } = await supabase
+        .from('employees')
+        .insert([employee])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('❌ Error creating employee:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data };
+    } catch (error) {
+      console.error('❌ Error creating employee:', error);
+      return { success: false, error: 'Database error' };
+    }
+  }
+
+  static async getEmployeeById(employeeId: number): Promise<ApiResponse<Employee>> {
+    try {
+      const { data, error } = await supabase
+        .from('employees')
+        .select('*')
+        .eq('id', employeeId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('❌ Error getting employee by id:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data: data || null };
+    } catch (error) {
+      console.error('❌ Error getting employee by id:', error);
+      return { success: false, error: 'Database error' };
+    }
+  }
+
+  static async getVerifiedEmployees(): Promise<ApiResponse<Employee[]>> {
+    try {
+      const { data, error } = await supabase
+        .from('employees')
+        .select('*')
+        .eq('is_verified', true);
+
+      if (error) {
+        console.error('❌ Error getting verified employees:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data: data || [] };
+    } catch (error) {
+      console.error('❌ Error getting verified employees:', error);
+      return { success: false, error: 'Database error' };
+    }
+  }
+
+  static async validateVerificationCode(
+    code: string,
+    type: VerificationCodeType
+  ): Promise<ApiResponse<VerificationCode>> {
+    try {
+      const { data, error } = await supabase
+        .from('verification_codes')
+        .select('*')
+        .eq('code', code)
+        .eq('type', type)
+        .eq('is_used', false)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('❌ Error validating verification code:', error);
+        return { success: false, error: error.message };
+      }
+
+      if (!data) {
+        return { success: false, error: 'Kode verifikasi tidak valid atau sudah digunakan' };
+      }
+
+      return { success: true, data };
+    } catch (error) {
+      console.error('❌ Error validating verification code:', error);
+      return { success: false, error: 'Database error' };
+    }
+  }
+
+  static async markVerificationCodeAsUsed(code: string): Promise<ApiResponse<VerificationCode>> {
+    try {
+      const { data, error } = await supabase
+        .from('verification_codes')
+        .update({ is_used: true })
+        .eq('code', code)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('❌ Error marking verification code as used:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data };
+    } catch (error) {
+      console.error('❌ Error marking verification code as used:', error);
+      return { success: false, error: 'Database error' };
+    }
+  }
+
+  static async createVerificationCode(type: VerificationCodeType): Promise<ApiResponse<VerificationCode>> {
+    try {
+      const code = this.generateRandomCode();
+      const { data, error } = await supabase
+        .from('verification_codes')
+        .insert([{ code, type, is_used: false }])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('❌ Error creating verification code:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data };
+    } catch (error) {
+      console.error('❌ Error creating verification code:', error);
+      return { success: false, error: 'Database error' };
+    }
+  }
+
+  private static generateRandomCode(): string {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = '';
+    for (let i = 0; i < 6; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
+  }
+
+  static async getSchedulesForWeek(startDate: string, endDate: string): Promise<ApiResponse<Schedule[]>> {
+    try {
+      const { data, error } = await supabase
+        .from('schedules')
+        .select('*, employees(id, nama, telegram_id)')
+        .gte('tanggal', startDate)
+        .lte('tanggal', endDate)
+        .order('tanggal', { ascending: true })
+        .order('shift', { ascending: true });
+
+      if (error) {
+        console.error('❌ Error getting schedules:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data: data || [] };
+    } catch (error) {
+      console.error('❌ Error getting schedules:', error);
+      return { success: false, error: 'Database error' };
+    }
+  }
+
+  static async replaceWeekSchedules(
+    startDate: string,
+    endDate: string,
+    schedules: Omit<Schedule, 'id' | 'created_at'>[]
+  ): Promise<ApiResponse<Schedule[]>> {
+    try {
+      const { error: deleteError } = await supabase
+        .from('schedules')
+        .delete()
+        .gte('tanggal', startDate)
+        .lte('tanggal', endDate);
+
+      if (deleteError) {
+        console.error('❌ Error deleting old schedules:', deleteError);
+        return { success: false, error: deleteError.message };
+      }
+
+      if (schedules.length === 0) {
+        return { success: true, data: [] };
+      }
+
+      const { data, error } = await supabase
+        .from('schedules')
+        .insert(schedules)
+        .select('*, employees(id, nama, telegram_id)');
+
+      if (error) {
+        console.error('❌ Error inserting schedules:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data: data || [] };
+    } catch (error) {
+      console.error('❌ Error replacing week schedules:', error);
+      return { success: false, error: 'Database error' };
+    }
+  }
+
+  static async getScheduleById(scheduleId: number): Promise<ApiResponse<Schedule>> {
+    try {
+      const { data, error } = await supabase
+        .from('schedules')
+        .select('*, employees(id, nama, telegram_id)')
+        .eq('id', scheduleId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('❌ Error getting schedule:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data: data || null };
+    } catch (error) {
+      console.error('❌ Error getting schedule:', error);
+      return { success: false, error: 'Database error' };
+    }
+  }
+
+  static async updateScheduleEmployee(scheduleId: number, employeeId: number): Promise<ApiResponse<Schedule>> {
+    try {
+      const { data, error } = await supabase
+        .from('schedules')
+        .update({ employee_id: employeeId })
+        .eq('id', scheduleId)
+        .select('*, employees(id, nama, telegram_id)')
+        .single();
+
+      if (error) {
+        console.error('❌ Error updating schedule employee:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data };
+    } catch (error) {
+      console.error('❌ Error updating schedule employee:', error);
+      return { success: false, error: 'Database error' };
+    }
+  }
+
+  static async getEmployeeFutureSchedules(employeeId: number, fromDate: string): Promise<ApiResponse<Schedule[]>> {
+    try {
+      const { data, error } = await supabase
+        .from('schedules')
+        .select('*, employees(id, nama, telegram_id)')
+        .eq('employee_id', employeeId)
+        .gte('tanggal', fromDate)
+        .order('tanggal', { ascending: true });
+
+      if (error) {
+        console.error('❌ Error getting future schedules:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data: data || [] };
+    } catch (error) {
+      console.error('❌ Error getting future schedules:', error);
+      return { success: false, error: 'Database error' };
+    }
+  }
+
+  static async createSwapRequest(scheduleId: number, requesterId: number): Promise<ApiResponse<SwapRequest>> {
+    try {
+      const { data, error } = await supabase
+        .from('swap_requests')
+        .insert([{ schedule_id: scheduleId, requester_id: requesterId, status: 'open' }])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('❌ Error creating swap request:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data };
+    } catch (error) {
+      console.error('❌ Error creating swap request:', error);
+      return { success: false, error: 'Database error' };
+    }
+  }
+
+  static async getSwapRequestById(id: number): Promise<ApiResponse<SwapRequest>> {
+    try {
+      const { data, error } = await supabase
+        .from('swap_requests')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('❌ Error getting swap request:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data: data || null };
+    } catch (error) {
+      console.error('❌ Error getting swap request:', error);
+      return { success: false, error: 'Database error' };
+    }
+  }
+
+  static async completeSwapRequest(id: number): Promise<ApiResponse<SwapRequest>> {
+    try {
+      const { data, error } = await supabase
+        .from('swap_requests')
+        .update({ status: 'completed' })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('❌ Error completing swap request:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data };
+    } catch (error) {
+      console.error('❌ Error completing swap request:', error);
+      return { success: false, error: 'Database error' };
+    }
+  }
+
+  static async createGeneralCleaningLog(tanggal: string, employeeId: number): Promise<ApiResponse<GeneralCleaningLog>> {
+    try {
+      const { data, error } = await supabase
+        .from('general_cleaning_logs')
+        .insert([{ tanggal, employee_id: employeeId }])
+        .select('*, employees(id, nama)')
+        .single();
+
+      if (error) {
+        console.error('❌ Error creating GC log:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data };
+    } catch (error) {
+      console.error('❌ Error creating GC log:', error);
+      return { success: false, error: 'Database error' };
+    }
+  }
+
+  static async hasEmployeeTakenGcOnDate(employeeId: number, tanggal: string): Promise<ApiResponse<boolean>> {
+    try {
+      const { count, error } = await supabase
+        .from('general_cleaning_logs')
+        .select('*', { count: 'exact', head: true })
+        .eq('tanggal', tanggal)
+        .eq('employee_id', employeeId);
+
+      if (error) {
+        console.error('❌ Error checking GC log:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data: (count || 0) > 0 };
+    } catch (error) {
+      console.error('❌ Error checking GC log:', error);
+      return { success: false, error: 'Database error' };
+    }
+  }
+
+  static async countGeneralCleaningForDate(tanggal: string): Promise<ApiResponse<number>> {
+    try {
+      const { count, error } = await supabase
+        .from('general_cleaning_logs')
+        .select('*', { count: 'exact', head: true })
+        .eq('tanggal', tanggal);
+
+      if (error) {
+        console.error('❌ Error counting GC logs:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data: count || 0 };
+    } catch (error) {
+      console.error('❌ Error counting GC logs:', error);
+      return { success: false, error: 'Database error' };
+    }
+  }
+
+  static async getGeneralCleaningLogsForWeek(startDate: string, endDate: string): Promise<ApiResponse<GeneralCleaningLog[]>> {
+    try {
+      const { data, error } = await supabase
+        .from('general_cleaning_logs')
+        .select('*, employees(id, nama, rekening_info)')
+        .gte('tanggal', startDate)
+        .lte('tanggal', endDate);
+
+      if (error) {
+        console.error('❌ Error getting GC logs:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data: data || [] };
+    } catch (error) {
+      console.error('❌ Error getting GC logs:', error);
+      return { success: false, error: 'Database error' };
+    }
+  }
+
+  static async getWeeklyPayroll(startDate: string, endDate: string): Promise<ApiResponse<PayrollEntry[]>> {
+    try {
+      const schedulesRes = await this.getSchedulesForWeek(startDate, endDate);
+      if (!schedulesRes.success) {
+        return { success: false, error: schedulesRes.error || 'Gagal mengambil jadwal' };
+      }
+
+      const gcRes = await this.getGeneralCleaningLogsForWeek(startDate, endDate);
+      if (!gcRes.success) {
+        return { success: false, error: gcRes.error || 'Gagal mengambil log GC' };
+      }
+
+      const employeesRes = await this.getVerifiedEmployees();
+      if (!employeesRes.success) {
+        return { success: false, error: employeesRes.error || 'Gagal mengambil karyawan' };
+      }
+
+      const shiftPay = 45000;
+      const shiftCounts: Record<number, number> = {};
+      const gcCounts: Record<number, number> = {};
+
+      for (const s of schedulesRes.data || []) {
+        shiftCounts[s.employee_id] = (shiftCounts[s.employee_id] || 0) + 1;
+      }
+
+      for (const log of gcRes.data || []) {
+        gcCounts[log.employee_id] = (gcCounts[log.employee_id] || 0) + 1;
+      }
+
+      const payroll: PayrollEntry[] = (employeesRes.data || [])
+        .filter((e) => e.id && ((shiftCounts[e.id] || 0) > 0 || (gcCounts[e.id] || 0) > 0))
+        .map((e) => {
+          const shifts = shiftCounts[e.id!] || 0;
+          const gc = gcCounts[e.id!] || 0;
+          return {
+            nama: e.nama,
+            totalShifts: shifts,
+            gcCount: gc,
+            totalGaji: shifts * shiftPay,
+            rekeningInfo: e.rekening_info,
+          };
+        })
+        .sort((a, b) => a.nama.localeCompare(b.nama));
+
+      return { success: true, data: payroll };
+    } catch (error) {
+      console.error('❌ Error calculating payroll:', error);
+      return { success: false, error: 'Database error' };
+    }
+  }
+
   static async getTodaysIncomeByDriver(): Promise<ApiResponse<{ driverName: string; totalIncome: number }[]>> {
     try {
       const today = new Date();
