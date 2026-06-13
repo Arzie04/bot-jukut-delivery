@@ -323,7 +323,7 @@ Pastikan jumlah karyawan cukup dan batas shift realistis.`;
     static getScheduleHeaderMessage(week) {
         const startDisplay = scheduleService_js_1.default.formatDateDisplay(week.start);
         const endDisplay = scheduleService_js_1.default.formatDateDisplay(week.end);
-        return `📅 *JADWAL MINGGU INI*\nPeriode: ${startDisplay} – ${endDisplay}\n\n`;
+        return `📅 <b>JADWAL MINGGU INI</b>\nPeriode: ${startDisplay} – ${endDisplay}\n\n`;
     }
     static getFullWeeklyScheduleMessage(schedules, week) {
         let message = this.getScheduleHeaderMessage({ start: week.dates[0] || '', end: week.dates[week.dates.length - 1] || '' });
@@ -331,18 +331,18 @@ Pastikan jumlah karyawan cukup dan batas shift realistis.`;
         for (const tanggal of week.dates) {
             const dayName = scheduleService_js_1.default.getDayName(tanggal);
             const dateDisplay = scheduleService_js_1.default.formatDateDisplay(tanggal);
-            message += `*${dayName}, ${dateDisplay}*\n`;
+            message += `<b>${dayName}, ${dateDisplay}</b>\n`;
             for (const shift of ['pagi', 'siang']) {
                 const key = `${tanggal}:${shift}`;
                 const slots = grouped.get(key) || [];
                 const names = slots
                     .map((s) => scheduleService_js_1.default.getEmployeeFromSchedule(s)?.nama || '—')
-                    .join(' & ');
+                    .join(' &amp; ');
                 message += `${scheduleService_js_1.default.getShiftLabel(shift)}: ${names}\n`;
             }
             message += `\n`;
         }
-        message += `_Gunakan /tukar_jadwal di chat pribadi bot jika ingin melepas shift._`;
+        message += `<i>Gunakan /tukar_jadwal di chat pribadi bot jika ingin melepas shift.</i>`;
         return message;
     }
     static getEmptyScheduleMessage() {
@@ -351,18 +351,18 @@ Pastikan jumlah karyawan cukup dan batas shift realistis.`;
 Admin dapat membuat jadwal dengan /buat_jadwal di chat pribadi.`;
     }
     static getSwapRequestMessage(requesterName, dayName, dateDisplay, shiftLabel) {
-        return `🔄 *${requesterName}* ingin melepas/menukar jadwal *${dayName}, ${dateDisplay} — ${shiftLabel}*.
+        return `🔄 <b>${requesterName}</b> ingin melepas/menukar jadwal <b>${dayName}, ${dateDisplay} — ${shiftLabel}</b>.
 
 Ada yang mau ambil?`;
     }
     static getSwapTakenMessage(takerName, dayName, shiftLabel) {
-        return `✅ *${takerName}* mengambil shift ${dayName} (${shiftLabel}).`;
+        return `✅ <b>${takerName}</b> mengambil shift ${dayName} (${shiftLabel}).`;
     }
     static getSwapCompletedMessage(name1, name2) {
-        return `🔁 Tukar jadwal berhasil antara *${name1}* dan *${name2}*.`;
+        return `🔁 Tukar jadwal berhasil antara <b>${name1}</b> dan <b>${name2}</b>.`;
     }
     static getSelectShiftToSwapMessage() {
-        return `🔄 *Tukar Jadwal*\n\nSilakan pilih shift milik Anda yang ingin dilepas atau ditawarkan untuk ditukar ke grup:`;
+        return `🔄 <b>Tukar Jadwal</b>\n\nSilakan pilih shift milik Anda yang ingin dilepas atau ditawarkan untuk ditukar ke grup:`;
     }
     static getGeneralCleaningPromptMessage() {
         return `🧹 *General Cleaning Hari Ini*

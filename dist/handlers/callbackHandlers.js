@@ -242,7 +242,7 @@ class CallbackHandlers {
             const dateDisplay = scheduleService_js_1.default.formatDateDisplay(schedule.tanggal);
             const shiftLabel = schedule.shift === 'pagi' ? 'Pagi' : 'Siang';
             await bot.sendMessage(chatId, messages_js_1.default.getSwapRequestMessage(employeeRes.data.nama, dayName, dateDisplay, shiftLabel), {
-                parse_mode: 'Markdown',
+                parse_mode: 'HTML',
                 reply_markup: keyboard_js_1.default.createSwapActionKeyboard(swapRes.data.id),
             });
             await bot.answerCallbackQuery(query.id, { text: '✅ Permintaan tukar diposting' });
@@ -283,7 +283,7 @@ class CallbackHandlers {
             await supabase_js_1.default.completeSwapRequest(swapRequestId);
             const dayName = scheduleService_js_1.default.getDayName(scheduleRes.data.tanggal);
             const shiftLabel = scheduleRes.data.shift === 'pagi' ? 'Pagi' : 'Siang';
-            await bot.editMessageText(messages_js_1.default.getSwapTakenMessage(takerRes.data.nama, dayName, shiftLabel), { chat_id: chatId, message_id: messageId, parse_mode: 'Markdown' });
+            await bot.editMessageText(messages_js_1.default.getSwapTakenMessage(takerRes.data.nama, dayName, shiftLabel), { chat_id: chatId, message_id: messageId, parse_mode: 'HTML' });
             await bot.answerCallbackQuery(query.id, { text: '✅ Shift berhasil diambil!' });
         }
         catch (error) {
@@ -330,7 +330,7 @@ class CallbackHandlers {
             await supabase_js_1.default.completeSwapRequest(swapRequestId);
             const requesterRes = await supabase_js_1.default.getEmployeeById(swapRes.data.requester_id);
             const requesterName = requesterRes.data?.nama || 'Karyawan';
-            await bot.editMessageText(messages_js_1.default.getSwapCompletedMessage(requesterName, swapperRes.data.nama), { chat_id: chatId, message_id: messageId, parse_mode: 'Markdown' });
+            await bot.editMessageText(messages_js_1.default.getSwapCompletedMessage(requesterName, swapperRes.data.nama), { chat_id: chatId, message_id: messageId, parse_mode: 'HTML' });
             await bot.answerCallbackQuery(query.id, { text: '🔁 Tukar jadwal berhasil!' });
         }
         catch (error) {
@@ -375,7 +375,7 @@ class CallbackHandlers {
                 await bot.editMessageText(messages_js_1.default.getGeneralCleaningTakenMessage(names), {
                     chat_id: chatId,
                     message_id: messageId,
-                    parse_mode: 'Markdown',
+                    parse_mode: 'HTML',
                 });
             }
             else {

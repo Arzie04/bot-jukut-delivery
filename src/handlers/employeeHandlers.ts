@@ -172,7 +172,7 @@ export class EmployeeHandlers {
       }
 
       const message = MessageUtils.getFullWeeklyScheduleMessage(schedules, week);
-      await bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+      await bot.sendMessage(chatId, message, { parse_mode: 'HTML' });
     } catch (error) {
       console.error('❌ Error in /jadwal:', error);
       await bot.sendMessage(chatId, MessageUtils.getErrorMessage('Terjadi kesalahan sistem'));
@@ -404,7 +404,7 @@ export class EmployeeHandlers {
       const groupChatId = config.employeeGroupChatId;
       if (groupChatId && saveRes.data) {
         const scheduleMessage = MessageUtils.getFullWeeklyScheduleMessage(saveRes.data, week);
-        await bot.sendMessage(Number(groupChatId), scheduleMessage, { parse_mode: 'Markdown' });
+        await bot.sendMessage(Number(groupChatId), scheduleMessage, { parse_mode: 'HTML' });
       }
     } catch (error) {
       console.error('❌ Error generating schedule:', error);

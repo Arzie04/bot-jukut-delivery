@@ -146,7 +146,7 @@ class EmployeeHandlers {
                 return;
             }
             const message = messages_js_1.default.getFullWeeklyScheduleMessage(schedules, week);
-            await bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+            await bot.sendMessage(chatId, message, { parse_mode: 'HTML' });
         }
         catch (error) {
             console.error('❌ Error in /jadwal:', error);
@@ -310,7 +310,7 @@ class EmployeeHandlers {
             const groupChatId = index_js_1.config.employeeGroupChatId;
             if (groupChatId && saveRes.data) {
                 const scheduleMessage = messages_js_1.default.getFullWeeklyScheduleMessage(saveRes.data, week);
-                await bot.sendMessage(Number(groupChatId), scheduleMessage, { parse_mode: 'Markdown' });
+                await bot.sendMessage(Number(groupChatId), scheduleMessage, { parse_mode: 'HTML' });
             }
         }
         catch (error) {

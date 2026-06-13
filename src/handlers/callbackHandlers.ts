@@ -302,7 +302,7 @@ export class CallbackHandlers {
         chatId,
         MessageUtils.getSwapRequestMessage(employeeRes.data.nama, dayName, dateDisplay, shiftLabel),
         {
-          parse_mode: 'Markdown',
+          parse_mode: 'HTML',
           reply_markup: KeyboardUtils.createSwapActionKeyboard(swapRes.data.id),
         }
       );
@@ -363,7 +363,7 @@ export class CallbackHandlers {
 
       await bot.editMessageText(
         MessageUtils.getSwapTakenMessage(takerRes.data.nama, dayName, shiftLabel),
-        { chat_id: chatId, message_id: messageId, parse_mode: 'Markdown' }
+        { chat_id: chatId, message_id: messageId, parse_mode: 'HTML' }
       );
 
       await bot.answerCallbackQuery(query.id, { text: '✅ Shift berhasil diambil!' });
@@ -434,7 +434,7 @@ export class CallbackHandlers {
 
       await bot.editMessageText(
         MessageUtils.getSwapCompletedMessage(requesterName, swapperRes.data.nama),
-        { chat_id: chatId, message_id: messageId, parse_mode: 'Markdown' }
+        { chat_id: chatId, message_id: messageId, parse_mode: 'HTML' }
       );
 
       await bot.answerCallbackQuery(query.id, { text: '🔁 Tukar jadwal berhasil!' });
@@ -492,7 +492,7 @@ export class CallbackHandlers {
         await bot.editMessageText(MessageUtils.getGeneralCleaningTakenMessage(names), {
           chat_id: chatId,
           message_id: messageId,
-          parse_mode: 'Markdown',
+          parse_mode: 'HTML',
         });
       } else {
         await bot.answerCallbackQuery(query.id, { text: `✅ ${employeeRes.data.nama} terdaftar GC (${newCount}/2)` });
