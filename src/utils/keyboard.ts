@@ -109,23 +109,19 @@ export class KeyboardUtils {
     return { inline_keyboard: keyboard };
   }
 
-  static createScheduleSwapKeyboard(slots: Schedule[]): InlineKeyboardMarkup {
-    const buttons: InlineKeyboardButton[] = slots
-      .filter((s) => s.id)
-      .map((s) => {
-        const name = ScheduleService.getEmployeeFromSchedule(s)?.nama || 'Karyawan';
-        return {
-          text: `🔄 Request Tukar ${name}`,
-          callback_data: `request_swap:${s.id}`,
-        };
-      });
+  static createMyShiftsKeyboard(schedules: Schedule[]): InlineKeyboardMarkup {
+    const keyboard: InlineKeyboardButton[][] = schedules.map(s => {
+      const date = ScheduleService.formatDateDisplay(s.tanggal);
+      const day = ScheduleService.getDayName(s.tanggal);
+      const shift = ScheduleService.getShiftLabel(s.shift as any);
+      
+      return [{
+        text: `📅 ${day}, ${date} (${shift})`,
+        callback_data: `request_swap:${s.id}`
+      }];
+    });
 
-    const rows: InlineKeyboardButton[][] = [];
-    for (let i = 0; i < buttons.length; i += 2) {
-      rows.push(buttons.slice(i, i + 2));
-    }
-
-    return { inline_keyboard: rows };
+    return { inline_keyboard: keyboard };
   }
 
   static createSwapActionKeyboard(swapRequestId: number): InlineKeyboardMarkup {

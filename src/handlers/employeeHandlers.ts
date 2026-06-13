@@ -171,41 +171,52 @@ export class EmployeeHandlers {
         return;
       }
 
-      await this.sendScheduleMessages(bot, chatId, schedules, week);
+      const message = MessageUtils.getFullWeeklyScheduleMessage(schedules, week);
+      await bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
     } catch (error) {
       console.error('❌ Error in /jadwal:', error);
       await bot.sendMessage(chatId, MessageUtils.getErrorMessage('Terjadi kesalahan sistem'));
     }
   }
 
-  static async sendScheduleMessages(
-    bot: TelegramBot,
-    chatId: number,
-    schedules: Schedule[],
-    week: { start: string; end: string; dates: string[] }
-  ): Promise<void> {
-    const header = MessageUtils.getScheduleHeaderMessage(week);
-    await bot.sendMessage(chatId, header);
+  static async handleTukarJadwal(bot: TelegramBot, msg: TelegramBot.Message): Promise<void> {
+    const chatId = msg.chat.id;
+    const telegramId = msg.from?.id.toString();
 
-    const grouped = ScheduleService.groupSchedulesByDayShift(schedules);
+    if (!telegramId || !isPrivateChat(msg.chat.type)) {
+      await bot.sendMessage(chatId, '⛔ Request tukar jadwal hanya bisa dilakukan melalui chat pribadi dengan bot.');
+      return;
+    }
 
-    for (const tanggal of week.dates) {
-      for (const shift of ['pagi', 'siang'] as const) {
-        const key = `${tanggal}:${shift}`;
-        const slots = grouped.get(key) || [];
-        if (slots.length === 0) continue;
-
-        const names = slots
-          .map((s) => ScheduleService.getEmployeeFromSchedule(s)?.nama || '—')
-          .join(' & ');
-
-        const message = `📆 *${ScheduleService.getDayName(tanggal)}, ${ScheduleService.formatDateDisplay(tanggal)}*\n${ScheduleService.getShiftLabel(shift)}: ${names}`;
-
-        await bot.sendMessage(chatId, message, {
-          parse_mode: 'Markdown',
-          reply_markup: KeyboardUtils.createScheduleSwapKeyboard(slots),
-        });
+    try {
+      const employeeRes = await SupabaseService.getEmployeeByTelegramId(telegramId);
+      if (!employeeRes.success || !employeeRes.data) {
+        await bot.sendMessage(chatId, MessageUtils.getNotRegisteredMessage());
+        return;
       }
+
+      const week = ScheduleService.getCurrentWeekRange();
+      const schedulesRes = await SupabaseService.getSchedulesForWeek(week.start, week.end);
+      
+      if (!schedulesRes.success || !schedulesRes.data) {
+        await bot.sendMessage(chatId, '❌ Gagal mengambil data jadwal.');
+        return;
+      }
+
+      // Filter jadwal yang hanya milik karyawan ini
+      const myShifts = schedulesRes.data.filter(s => s.employee_id === employeeRes.data?.id);
+
+      if (myShifts.length === 0) {
+        await bot.sendMessage(chatId, '📅 Anda tidak memiliki shift yang tercatat untuk minggu ini.');
+        return;
+      }
+
+      await bot.sendMessage(chatId, MessageUtils.getSelectShiftToSwapMessage(), {
+        reply_markup: KeyboardUtils.createMyShiftsKeyboard(myShifts)
+      });
+    } catch (error) {
+      console.error('❌ Error in /tukar_jadwal:', error);
+      await bot.sendMessage(chatId, MessageUtils.getErrorMessage('Terjadi kesalahan sistem'));
     }
   }
 

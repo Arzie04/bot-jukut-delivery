@@ -1,4 +1,4 @@
-import { DeliveryOrder, Driver, PayrollEntry } from '../types';
+import { DeliveryOrder, Driver, PayrollEntry, Schedule } from '../types';
 import ScheduleService from '../services/scheduleService.js';
 import { config } from '../config';
 import KeyboardUtils from './keyboard';
@@ -376,10 +376,32 @@ Pastikan jumlah karyawan cukup dan batas shift realistis.`;
   static getScheduleHeaderMessage(week: { start: string; end: string }): string {
     const startDisplay = ScheduleService.formatDateDisplay(week.start);
     const endDisplay = ScheduleService.formatDateDisplay(week.end);
-    return `📅 *Jadwal Minggu Ini*
-${startDisplay} – ${endDisplay}
+    return `📅 *JADWAL MINGGU INI*\nPeriode: ${startDisplay} – ${endDisplay}\n\n`;
+  }
 
-Klik "Request Tukar" di samping nama untuk melepas atau menukar shift.`;
+  static getFullWeeklyScheduleMessage(schedules: Schedule[], week: { dates: string[] }): string {
+    let message = this.getScheduleHeaderMessage({ start: week.dates[0] || '', end: week.dates[week.dates.length - 1] || '' });
+    const grouped = ScheduleService.groupSchedulesByDayShift(schedules);
+
+    for (const tanggal of week.dates) {
+      const dayName = ScheduleService.getDayName(tanggal);
+      const dateDisplay = ScheduleService.formatDateDisplay(tanggal);
+      message += `*${dayName}, ${dateDisplay}*\n`;
+
+      for (const shift of ['pagi', 'siang'] as const) {
+        const key = `${tanggal}:${shift}`;
+        const slots = grouped.get(key) || [];
+        const names = slots
+          .map((s) => ScheduleService.getEmployeeFromSchedule(s)?.nama || '—')
+          .join(' & ');
+        
+        message += `${ScheduleService.getShiftLabel(shift)}: ${names}\n`;
+      }
+      message += `\n`;
+    }
+
+    message += `_Gunakan /tukar_jadwal di chat pribadi bot jika ingin melepas shift._`;
+    return message;
   }
 
   static getEmptyScheduleMessage(): string {
@@ -405,6 +427,10 @@ Ada yang mau ambil?`;
 
   static getSwapCompletedMessage(name1: string, name2: string): string {
     return `🔁 Tukar jadwal berhasil antara *${name1}* dan *${name2}*.`;
+  }
+
+  static getSelectShiftToSwapMessage(): string {
+    return `🔄 *Tukar Jadwal*\n\nSilakan pilih shift milik Anda yang ingin dilepas atau ditawarkan untuk ditukar ke grup:`;
   }
 
   static getGeneralCleaningPromptMessage(): string {
