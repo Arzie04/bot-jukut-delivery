@@ -1,5 +1,4 @@
 import type TelegramBot from 'node-telegram-bot-api';
-import type { Schedule } from '../types/index.js';
 export declare class EmployeeHandlers {
     static handleRegistKaryawan(bot: TelegramBot, msg: TelegramBot.Message): Promise<void>;
     static handleBuatJadwal(bot: TelegramBot, msg: TelegramBot.Message): Promise<void>;
@@ -7,11 +6,7 @@ export declare class EmployeeHandlers {
     static handleListGaji(bot: TelegramBot, msg: TelegramBot.Message): Promise<void>;
     static handleGenerateCode(bot: TelegramBot, msg: TelegramBot.Message, typeArg?: string): Promise<void>;
     static handleJadwal(bot: TelegramBot, msg: TelegramBot.Message): Promise<void>;
-    static sendScheduleMessages(bot: TelegramBot, chatId: number, schedules: Schedule[], week: {
-        start: string;
-        end: string;
-        dates: string[];
-    }): Promise<void>;
+    static handleTukarJadwal(bot: TelegramBot, msg: TelegramBot.Message): Promise<void>;
     static handleTextMessage(bot: TelegramBot, msg: TelegramBot.Message): Promise<void>;
     private static handleEmployeeTextFlow;
     private static handleEmployeeNameInput;

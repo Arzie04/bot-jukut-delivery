@@ -9,7 +9,7 @@ export declare class KeyboardUtils {
     static createCompleteKeyboard(orderId: string): InlineKeyboardMarkup;
     static createActiveOrderActionKeyboard(orderId: string, status: DriverStatus): InlineKeyboardMarkup | undefined;
     static createInitialStatusKeyboard(): InlineKeyboardMarkup;
-    static createScheduleSwapKeyboard(slots: Schedule[]): InlineKeyboardMarkup;
+    static createMyShiftsKeyboard(schedules: Schedule[]): InlineKeyboardMarkup;
     static createSwapActionKeyboard(swapRequestId: number): InlineKeyboardMarkup;
     static createGeneralCleaningKeyboard(): InlineKeyboardMarkup;
     static parseCallbackData(data: string): CallbackData | null;

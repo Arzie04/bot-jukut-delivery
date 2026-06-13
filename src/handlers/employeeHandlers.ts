@@ -403,7 +403,8 @@ export class EmployeeHandlers {
 
       const groupChatId = config.employeeGroupChatId;
       if (groupChatId && saveRes.data) {
-        await this.sendScheduleMessages(bot, Number(groupChatId), saveRes.data, week);
+        const scheduleMessage = MessageUtils.getFullWeeklyScheduleMessage(saveRes.data, week);
+        await bot.sendMessage(Number(groupChatId), scheduleMessage, { parse_mode: 'Markdown' });
       }
     } catch (error) {
       console.error('❌ Error generating schedule:', error);

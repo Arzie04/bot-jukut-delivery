@@ -1,4 +1,4 @@
-import { DeliveryOrder, Driver, PayrollEntry } from '../types';
+import { DeliveryOrder, Driver, PayrollEntry, Schedule } from '../types';
 export declare class MessageUtils {
     private static getCustomerName;
     private static getCustomerWa;
@@ -58,10 +58,14 @@ export declare class MessageUtils {
         start: string;
         end: string;
     }): string;
+    static getFullWeeklyScheduleMessage(schedules: Schedule[], week: {
+        dates: string[];
+    }): string;
     static getEmptyScheduleMessage(): string;
     static getSwapRequestMessage(requesterName: string, dayName: string, dateDisplay: string, shiftLabel: string): string;
     static getSwapTakenMessage(takerName: string, dayName: string, shiftLabel: string): string;
     static getSwapCompletedMessage(name1: string, name2: string): string;
+    static getSelectShiftToSwapMessage(): string;
     static getGeneralCleaningPromptMessage(): string;
     static getGeneralCleaningTakenMessage(names: string[]): string;
     static getGeneralCleaningFullMessage(): string;

@@ -100,21 +100,17 @@ class KeyboardUtils {
         ];
         return { inline_keyboard: keyboard };
     }
-    static createScheduleSwapKeyboard(slots) {
-        const buttons = slots
-            .filter((s) => s.id)
-            .map((s) => {
-            const name = scheduleService_js_1.default.getEmployeeFromSchedule(s)?.nama || 'Karyawan';
-            return {
-                text: `🔄 Request Tukar ${name}`,
-                callback_data: `request_swap:${s.id}`,
-            };
+    static createMyShiftsKeyboard(schedules) {
+        const keyboard = schedules.map(s => {
+            const date = scheduleService_js_1.default.formatDateDisplay(s.tanggal);
+            const day = scheduleService_js_1.default.getDayName(s.tanggal);
+            const shift = scheduleService_js_1.default.getShiftLabel(s.shift);
+            return [{
+                    text: `📅 ${day}, ${date} (${shift})`,
+                    callback_data: `request_swap:${s.id}`
+                }];
         });
-        const rows = [];
-        for (let i = 0; i < buttons.length; i += 2) {
-            rows.push(buttons.slice(i, i + 2));
-        }
-        return { inline_keyboard: rows };
+        return { inline_keyboard: keyboard };
     }
     static createSwapActionKeyboard(swapRequestId) {
         return {

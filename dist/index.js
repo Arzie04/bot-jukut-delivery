@@ -84,6 +84,9 @@ bot.on('message', (msg) => {
         case '/regist_karyawan':
             employeeHandlers_1.default.handleRegistKaryawan(bot, msg);
             break;
+        case '/tukar_jadwal':
+            employeeHandlers_1.default.handleTukarJadwal(bot, msg);
+            break;
         case '/buat_jadwal':
             employeeHandlers_1.default.handleBuatJadwal(bot, msg);
             break;
