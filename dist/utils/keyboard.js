@@ -45,10 +45,7 @@ class KeyboardUtils {
             [
                 {
                     text: '🚚 AMBIL PESANAN',
-                    callback_data: JSON.stringify({
-                        action: 'take_order',
-                        orderId,
-                    }),
+                    callback_data: `take_order:${orderId}`,
                 },
             ],
         ];
@@ -60,10 +57,7 @@ class KeyboardUtils {
             [
                 {
                     text: '🚀 MULAI ANTAR',
-                    callback_data: JSON.stringify({
-                        action: 'start_delivery',
-                        orderId,
-                    }),
+                    callback_data: `start_delivery:${orderId}`,
                 },
             ],
         ];
@@ -75,10 +69,7 @@ class KeyboardUtils {
             [
                 {
                     text: '✅ SELESAI DIANTAR',
-                    callback_data: JSON.stringify({
-                        action: 'complete_delivery',
-                        orderId,
-                    }),
+                    callback_data: `complete_delivery:${orderId}`,
                 },
             ],
         ];
@@ -99,17 +90,11 @@ class KeyboardUtils {
             [
                 {
                     text: '🔴 OFF',
-                    callback_data: JSON.stringify({
-                        action: 'set_status',
-                        status: 'off',
-                    }),
+                    callback_data: 'set_status:off',
                 },
                 {
                     text: '🟢 STANDBY',
-                    callback_data: JSON.stringify({
-                        action: 'set_status',
-                        status: 'standby',
-                    }),
+                    callback_data: 'set_status:standby',
                 },
             ],
         ];
@@ -122,10 +107,7 @@ class KeyboardUtils {
             const name = scheduleService_js_1.default.getEmployeeFromSchedule(s)?.nama || 'Karyawan';
             return {
                 text: `🔄 Request Tukar ${name}`,
-                callback_data: JSON.stringify({
-                    action: 'request_swap',
-                    scheduleId: s.id,
-                }),
+                callback_data: `request_swap:${s.id}`,
             };
         });
         const rows = [];
@@ -140,17 +122,11 @@ class KeyboardUtils {
                 [
                     {
                         text: '✅ Ambil',
-                        callback_data: JSON.stringify({
-                            action: 'take_shift',
-                            swapRequestId,
-                        }),
+                        callback_data: `take_shift:${swapRequestId}`,
                     },
                     {
                         text: '🔁 Tukar',
-                        callback_data: JSON.stringify({
-                            action: 'swap_shift',
-                            swapRequestId,
-                        }),
+                        callback_data: `swap_shift:${swapRequestId}`,
                     },
                 ],
             ],
@@ -162,9 +138,7 @@ class KeyboardUtils {
                 [
                     {
                         text: '✅ Ambil',
-                        callback_data: JSON.stringify({
-                            action: 'take_gc',
-                        }),
+                        callback_data: 'take_gc',
                     },
                 ],
             ],
@@ -173,7 +147,33 @@ class KeyboardUtils {
     // Parse callback data safely
     static parseCallbackData(data) {
         try {
-            return JSON.parse(data);
+            // Fallback untuk format JSON (pesan lama yang masih ada di chat)
+            if (data.startsWith('{')) {
+                return JSON.parse(data);
+            }
+            // Format baru: "action:value"
+            const colonIndex = data.indexOf(':');
+            if (colonIndex === -1) {
+                return { action: data };
+            }
+            const action = data.substring(0, colonIndex);
+            const value = data.substring(colonIndex + 1);
+            const result = { action };
+            if (value) {
+                if (action === 'set_status') {
+                    result.status = value;
+                }
+                else if (['take_order', 'start_delivery', 'complete_delivery'].includes(action)) {
+                    result.orderId = value;
+                }
+                else if (action === 'request_swap') {
+                    result.scheduleId = value;
+                }
+                else if (['take_shift', 'swap_shift'].includes(action)) {
+                    result.swapRequestId = parseInt(value, 10);
+                }
+            }
+            return result;
         }
         catch (error) {
             console.error('❌ Error parsing callback data:', error);

@@ -45,10 +45,7 @@ export class KeyboardUtils {
       [
         {
           text: '🚚 AMBIL PESANAN',
-          callback_data: JSON.stringify({
-            action: 'take_order',
-            orderId,
-          } as CallbackData),
+          callback_data: `take_order:${orderId}`,
         },
       ],
     ];
@@ -62,10 +59,7 @@ export class KeyboardUtils {
       [
         {
           text: '🚀 MULAI ANTAR',
-          callback_data: JSON.stringify({
-            action: 'start_delivery',
-            orderId,
-          } as CallbackData),
+          callback_data: `start_delivery:${orderId}`,
         },
       ],
     ];
@@ -79,10 +73,7 @@ export class KeyboardUtils {
       [
         {
           text: '✅ SELESAI DIANTAR',
-          callback_data: JSON.stringify({
-            action: 'complete_delivery',
-            orderId,
-          } as CallbackData),
+          callback_data: `complete_delivery:${orderId}`,
         },
       ],
     ];
@@ -106,17 +97,11 @@ export class KeyboardUtils {
       [
         {
           text: '🔴 OFF',
-          callback_data: JSON.stringify({
-            action: 'set_status',
-            status: 'off',
-          } as CallbackData),
+          callback_data: 'set_status:off',
         },
         {
           text: '🟢 STANDBY',
-          callback_data: JSON.stringify({
-            action: 'set_status',
-            status: 'standby',
-          } as CallbackData),
+          callback_data: 'set_status:standby',
         },
       ],
     ];
@@ -131,10 +116,7 @@ export class KeyboardUtils {
         const name = ScheduleService.getEmployeeFromSchedule(s)?.nama || 'Karyawan';
         return {
           text: `🔄 Request Tukar ${name}`,
-          callback_data: JSON.stringify({
-            action: 'request_swap',
-            scheduleId: s.id,
-          } as CallbackData),
+          callback_data: `request_swap:${s.id}`,
         };
       });
 
@@ -152,17 +134,11 @@ export class KeyboardUtils {
         [
           {
             text: '✅ Ambil',
-            callback_data: JSON.stringify({
-              action: 'take_shift',
-              swapRequestId,
-            } as CallbackData),
+            callback_data: `take_shift:${swapRequestId}`,
           },
           {
             text: '🔁 Tukar',
-            callback_data: JSON.stringify({
-              action: 'swap_shift',
-              swapRequestId,
-            } as CallbackData),
+            callback_data: `swap_shift:${swapRequestId}`,
           },
         ],
       ],
@@ -175,9 +151,7 @@ export class KeyboardUtils {
         [
           {
             text: '✅ Ambil',
-            callback_data: JSON.stringify({
-              action: 'take_gc',
-            } as CallbackData),
+            callback_data: 'take_gc',
           },
         ],
       ],
@@ -187,7 +161,35 @@ export class KeyboardUtils {
   // Parse callback data safely
   static parseCallbackData(data: string): CallbackData | null {
     try {
-      return JSON.parse(data) as CallbackData;
+      // Fallback untuk format JSON (pesan lama yang masih ada di chat)
+      if (data.startsWith('{')) {
+        return JSON.parse(data) as CallbackData;
+      }
+
+      // Format baru: "action:value"
+      const colonIndex = data.indexOf(':');
+      if (colonIndex === -1) {
+        return { action: data } as CallbackData;
+      }
+
+      const action = data.substring(0, colonIndex);
+      const value = data.substring(colonIndex + 1);
+
+      const result: any = { action };
+
+      if (value) {
+        if (action === 'set_status') {
+          result.status = value as DriverStatus;
+        } else if (['take_order', 'start_delivery', 'complete_delivery'].includes(action)) {
+          result.orderId = value;
+        } else if (action === 'request_swap') {
+          result.scheduleId = value;
+        } else if (['take_shift', 'swap_shift'].includes(action)) {
+          result.swapRequestId = parseInt(value, 10);
+        }
+      }
+
+      return result as CallbackData;
     } catch (error) {
       console.error('❌ Error parsing callback data:', error);
       return null;
